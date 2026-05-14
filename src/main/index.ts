@@ -15,8 +15,8 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
 const DEFAULT_HOME = 'https://www.bilibili.com'
-const MINI_WIDTH = 360
-const MINI_HEIGHT = 220
+const MINI_WIDTH = 480
+const MINI_HEIGHT = 300
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null

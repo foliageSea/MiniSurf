@@ -283,6 +283,7 @@ onUnmounted(() => {
 <template>
   <main class="flex h-full w-full flex-col bg-background text-foreground">
     <header
+      v-if="!isMiniMode"
       class="drag-region flex h-11 shrink-0 items-center border-b border-border bg-card/95 shadow-[0_1px_0_rgba(255,255,255,0.03)]"
     >
       <div class="flex w-44 items-center gap-2 px-3 text-sm font-semibold tracking-wide">
@@ -336,6 +337,7 @@ onUnmounted(() => {
     </header>
 
     <section
+      v-if="!isMiniMode"
       class="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background/90 px-3"
     >
       <button class="icon-button" :disabled="!activeTab?.canGoBack" title="后退" @click="goBack">
