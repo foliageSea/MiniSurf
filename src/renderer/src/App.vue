@@ -4,13 +4,10 @@ import {
   ArrowRight,
   Globe2,
   Loader2,
-  Maximize2,
-  Minus,
   MousePointer2,
   PanelBottomClose,
   Plus,
   RefreshCw,
-  Square,
   X
 } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
@@ -42,11 +39,14 @@ type WebviewElement = HTMLElement & {
 }
 
 const STORAGE_KEY = 'minisurf.tabs'
+const THEME_COLOR_KEY = 'minisurf.themeColor'
+const DEFAULT_THEME_COLOR = '#38bdf8'
 
 const tabs = reactive<BrowserTab[]>([])
 const activeTabId = ref('')
 const addressValue = ref('')
 const defaultHome = ref('https://www.bilibili.com')
+const themeColor = ref(DEFAULT_THEME_COLOR)
 const isMaximized = ref(false)
 const isMiniMode = ref(false)
 const webviews = new Map<string, WebviewElement>()
@@ -56,6 +56,57 @@ const activeTab = computed(() => tabs.find((tab) => tab.id === activeTabId.value
 
 function createId(): string {
   return `tab-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function hexToHsl(value: string): string | null {
+  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(value)
+  if (!match) return null
+
+  const red = parseInt(match[1], 16) / 255
+  const green = parseInt(match[2], 16) / 255
+  const blue = parseInt(match[3], 16) / 255
+  const max = Math.max(red, green, blue)
+  const min = Math.min(red, green, blue)
+  const lightness = (max + min) / 2
+  let hue = 0
+  let saturation = 0
+
+  if (max !== min) {
+    const delta = max - min
+    saturation = lightness > 0.5 ? delta / (2 - max - min) : delta / (max + min)
+    switch (max) {
+      case red:
+        hue = (green - blue) / delta + (green < blue ? 6 : 0)
+        break
+      case green:
+        hue = (blue - red) / delta + 2
+        break
+      default:
+        hue = (red - green) / delta + 4
+    }
+    hue /= 6
+  }
+
+  return `${Math.round(hue * 360)} ${Math.round(saturation * 100)}% ${Math.round(lightness * 100)}%`
+}
+
+function applyThemeColor(value: string): void {
+  const hsl = hexToHsl(value)
+  if (!hsl) return
+
+  themeColor.value = value.startsWith('#') ? value : `#${value}`
+  document.documentElement.style.setProperty('--primary', hsl)
+  document.documentElement.style.setProperty('--ring', hsl)
+  document.documentElement.style.setProperty('--accent', hsl)
+  localStorage.setItem(THEME_COLOR_KEY, themeColor.value)
+}
+
+function loadThemeColor(): void {
+  applyThemeColor(localStorage.getItem(THEME_COLOR_KEY) || DEFAULT_THEME_COLOR)
+}
+
+function handleThemeColorInput(event: Event): void {
+  applyThemeColor((event.target as HTMLInputElement).value)
 }
 
 function normalizeUrl(value: string): string {
@@ -348,6 +399,7 @@ watch(activeTabId, () => {
 })
 
 onMounted(async () => {
+  loadThemeColor()
   defaultHome.value = await window.api.getDefaultHome()
   if (!loadPersistedTabs()) openTab(defaultHome.value)
   await nextTick()
@@ -373,28 +425,20 @@ onUnmounted(() => {
   <main class="flex h-full w-full flex-col bg-background text-foreground">
     <header
       v-if="!isMiniMode"
-      class="drag-region flex h-11 shrink-0 items-center border-b border-border bg-card/95 shadow-[0_1px_0_rgba(255,255,255,0.03)]"
+      class="drag-region titlebar-glass relative flex h-11 shrink-0 items-center justify-center border-b border-border/70 shadow-[0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl"
     >
-      <div class="flex flex-1 items-center gap-2 px-3 text-sm font-semibold tracking-wide">
-        <div
-          class="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground"
-        >
-          <Globe2 class="h-4 w-4" />
-        </div>
+      <div class="pointer-events-none text-sm font-semibold tracking-wide">
         <span>MiniSurf</span>
       </div>
 
-      <div class="no-drag ml-2 flex shrink-0 items-center">
-        <button class="window-button" title="最小化" @click="minimizeWindow">
-          <Minus class="h-4 w-4" />
-        </button>
-        <button class="window-button" title="最大化/还原" @click="toggleMaximizeWindow">
-          <Square v-if="isMaximized" class="h-3.5 w-3.5" />
-          <Maximize2 v-else class="h-4 w-4" />
-        </button>
-        <button class="window-button-danger" title="最小化到托盘" @click="closeWindow">
-          <X class="h-4 w-4" />
-        </button>
+      <div class="no-drag absolute left-0 flex shrink-0 items-center gap-2 px-3">
+        <button class="window-traffic-button window-traffic-close" title="最小化到托盘" @click="closeWindow" />
+        <button class="window-traffic-button window-traffic-minimize" title="最小化" @click="minimizeWindow" />
+        <button
+          class="window-traffic-button window-traffic-maximize"
+          :title="isMaximized ? '还原' : '最大化'"
+          @click="toggleMaximizeWindow"
+        />
       </div>
     </header>
 
@@ -435,6 +479,14 @@ onUnmounted(() => {
         <PanelBottomClose v-else class="h-4 w-4" />
         {{ isMiniMode ? '穿透中' : '迷你' }}
       </button>
+
+      <label
+        class="no-drag flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-background/80 transition hover:bg-secondary"
+        title="修改窗口主题色"
+      >
+        <span class="h-4 w-4 rounded-full border border-white/30" :style="{ backgroundColor: themeColor }" />
+        <input class="sr-only" type="color" :value="themeColor" @input="handleThemeColorInput" />
+      </label>
     </section>
 
     <section class="relative min-h-0 flex-1 overflow-hidden bg-[#050816]">

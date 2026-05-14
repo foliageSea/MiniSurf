@@ -18,17 +18,31 @@ webview {
   background: #050816;
 }
 
+.titlebar-glass {
+  background:
+    linear-gradient(90deg, hsl(var(--primary) / 0.16), transparent 28%, transparent 72%, hsl(var(--primary) / 0.1)),
+    hsl(var(--card) / 0.68);
+}
+
 @layer components {
   .icon-button {
     @apply inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-35;
   }
 
-  .window-button {
-    @apply inline-flex h-8 w-10 items-center justify-center text-muted-foreground transition hover:bg-secondary hover:text-foreground;
+  .window-traffic-button {
+    @apply h-3 w-3 rounded-full border border-black/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition hover:brightness-110 active:brightness-90;
   }
 
-  .window-button-danger {
-    @apply inline-flex h-8 w-10 items-center justify-center text-muted-foreground transition hover:bg-destructive hover:text-destructive-foreground;
+  .window-traffic-close {
+    @apply bg-[#ff5f57];
+  }
+
+  .window-traffic-minimize {
+    @apply bg-[#ffbd2e];
+  }
+
+  .window-traffic-maximize {
+    @apply bg-[#28c840];
   }
 
   .browser-input {
