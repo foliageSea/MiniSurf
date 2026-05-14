@@ -27,8 +27,10 @@
     "clsx": "^2.1.1",
     "electron-updater": "^6.3.9",
     "lucide-vue-next": "^1.0.0",
+    "naive-ui": "^2.44.1",
     "tailwind-merge": "^3.6.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "vfonts": "^0.0.3"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "3.0.0",

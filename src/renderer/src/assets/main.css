@@ -24,11 +24,72 @@ webview {
     hsl(var(--card) / 0.68);
 }
 
-@layer components {
-  .icon-button {
-    @apply inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-35;
-  }
+.address-input {
+  width: 100%;
+}
 
+.tab-button.n-button {
+  --n-height: auto !important;
+  justify-content: flex-start;
+  min-height: 40px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: hsl(var(--secondary) / 0.35);
+  color: hsl(var(--muted-foreground));
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.tab-button.n-button:hover,
+.tab-button.n-button.is-active {
+  border-color: hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.tab-button .n-button__content {
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.tab-close:hover {
+  background: hsl(var(--muted));
+}
+
+.theme-color-picker {
+  width: 132px;
+  min-width: 132px;
+}
+
+.theme-color-picker .n-color-picker-trigger {
+  height: 36px;
+  border-radius: 8px;
+}
+
+.settings-modal {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.settings-title {
+  min-width: 48px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: hsl(var(--foreground));
+}
+
+@layer components {
   .window-traffic-button {
     @apply h-3 w-3 rounded-full border border-black/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition hover:brightness-110 active:brightness-90;
   }
@@ -43,9 +104,5 @@ webview {
 
   .window-traffic-maximize {
     @apply bg-[#28c840];
-  }
-
-  .browser-input {
-    @apply h-9 w-full rounded-md border border-input bg-background/80 px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-ring/35;
   }
 }

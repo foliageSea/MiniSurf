@@ -8,8 +8,20 @@ import {
   PanelBottomClose,
   Plus,
   RefreshCw,
+  Settings,
   X
 } from 'lucide-vue-next'
+import {
+  darkTheme,
+  NButton,
+  NColorPicker,
+  NConfigProvider,
+  NInput,
+  NModal,
+  NScrollbar,
+  NSpace,
+  type GlobalThemeOverrides
+} from 'naive-ui'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 
 type BrowserTab = {
@@ -49,10 +61,55 @@ const defaultHome = ref('https://www.bilibili.com')
 const themeColor = ref(DEFAULT_THEME_COLOR)
 const isMaximized = ref(false)
 const isMiniMode = ref(false)
+const isSettingsOpen = ref(false)
 const webviews = new Map<string, WebviewElement>()
 const cleanupCallbacks: Array<() => void> = []
 
 const activeTab = computed(() => tabs.find((tab) => tab.id === activeTabId.value) ?? tabs[0])
+const naiveThemeOverrides = computed<GlobalThemeOverrides>(() => ({
+  common: {
+    primaryColor: themeColor.value,
+    primaryColorHover: themeColor.value,
+    primaryColorPressed: themeColor.value,
+    primaryColorSuppl: themeColor.value,
+    borderRadius: '8px',
+    bodyColor: '#050816',
+    baseColor: '#0f172a',
+    cardColor: '#0f172a',
+    modalColor: '#0f172a',
+    popoverColor: '#0f172a',
+    textColorBase: '#e2e8f0',
+    textColor1: '#f8fafc',
+    textColor2: '#cbd5e1',
+    textColor3: '#94a3b8',
+    borderColor: 'rgba(148, 163, 184, 0.18)'
+  },
+  Button: {
+    colorHover: 'rgba(148, 163, 184, 0.14)',
+    colorPressed: 'rgba(148, 163, 184, 0.2)',
+    textColorHover: '#f8fafc',
+    textColorPressed: '#f8fafc',
+    textColorFocus: '#f8fafc',
+    borderHover: '1px solid rgba(148, 163, 184, 0.22)',
+    borderPressed: '1px solid rgba(148, 163, 184, 0.26)',
+    borderFocus: `1px solid ${themeColor.value}`,
+    rippleColor: themeColor.value
+  },
+  Input: {
+    color: 'rgba(15, 23, 42, 0.74)',
+    colorFocus: 'rgba(15, 23, 42, 0.9)',
+    border: '1px solid rgba(148, 163, 184, 0.24)',
+    borderHover: `1px solid ${themeColor.value}`,
+    borderFocus: `1px solid ${themeColor.value}`,
+    boxShadowFocus: `0 0 0 2px ${hexToRgba(themeColor.value, 0.28)}`,
+    placeholderColor: 'rgba(148, 163, 184, 0.8)',
+    textColor: '#e2e8f0'
+  },
+  Scrollbar: {
+    color: 'rgba(148, 163, 184, 0.38)',
+    colorHover: 'rgba(148, 163, 184, 0.58)'
+  }
+}))
 
 function createId(): string {
   return `tab-${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -90,6 +147,13 @@ function hexToHsl(value: string): string | null {
   return `${Math.round(hue * 360)} ${Math.round(saturation * 100)}% ${Math.round(lightness * 100)}%`
 }
 
+function hexToRgba(value: string, alpha: number): string {
+  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(value)
+  if (!match) return `rgba(56, 189, 248, ${alpha})`
+
+  return `rgba(${parseInt(match[1], 16)}, ${parseInt(match[2], 16)}, ${parseInt(match[3], 16)}, ${alpha})`
+}
+
 function applyThemeColor(value: string): void {
   const hsl = hexToHsl(value)
   if (!hsl) return
@@ -103,10 +167,6 @@ function applyThemeColor(value: string): void {
 
 function loadThemeColor(): void {
   applyThemeColor(localStorage.getItem(THEME_COLOR_KEY) || DEFAULT_THEME_COLOR)
-}
-
-function handleThemeColorInput(event: Event): void {
-  applyThemeColor((event.target as HTMLInputElement).value)
 }
 
 function normalizeUrl(value: string): string {
@@ -465,124 +525,149 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="flex h-full w-full flex-col bg-background text-foreground">
-    <header
-      v-if="!isMiniMode"
-      class="drag-region titlebar-glass relative flex h-11 shrink-0 items-center justify-center border-b border-border/70 shadow-[0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl"
-    >
-      <div class="pointer-events-none text-sm font-semibold tracking-wide">
-        <span>MiniSurf</span>
-      </div>
-
-      <div class="no-drag absolute left-0 flex shrink-0 items-center gap-2 px-3">
-        <button class="window-traffic-button window-traffic-close" title="最小化到托盘" @click="closeWindow" />
-        <button class="window-traffic-button window-traffic-minimize" title="最小化" @click="minimizeWindow" />
-        <button
-          class="window-traffic-button window-traffic-maximize"
-          :title="isMaximized ? '还原' : '最大化'"
-          @click="toggleMaximizeWindow"
-        />
-      </div>
-    </header>
-
-    <section
-      v-if="!isMiniMode"
-      class="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background/90 px-3"
-    >
-      <button class="icon-button" :disabled="!activeTab?.canGoBack" title="后退" @click="goBack">
-        <ArrowLeft class="h-4 w-4" />
-      </button>
-      <button
-        class="icon-button"
-        :disabled="!activeTab?.canGoForward"
-        title="前进"
-        @click="goForward"
-      >
-        <ArrowRight class="h-4 w-4" />
-      </button>
-      <button class="icon-button" title="刷新" @click="reload">
-        <RefreshCw class="h-4 w-4" :class="activeTab?.loading ? 'animate-spin text-primary' : ''" />
-      </button>
-
-      <form class="flex min-w-0 flex-1" @submit.prevent="submitAddress">
-        <input
-          v-model="addressValue"
-          class="browser-input"
-          spellcheck="false"
-          placeholder="输入网址或搜索内容"
-        />
-      </form>
-
-      <button
-        class="hidden items-center gap-2 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground transition hover:bg-secondary hover:text-foreground sm:inline-flex"
-        title="Alt+2 切换迷你模式"
-        @click="toggleMiniMode"
-      >
-        <MousePointer2 v-if="isMiniMode" class="h-4 w-4 text-primary" />
-        <PanelBottomClose v-else class="h-4 w-4" />
-        {{ isMiniMode ? '穿透中' : '迷你' }}
-      </button>
-
-      <label
-        class="no-drag flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-background/80 transition hover:bg-secondary"
-        title="修改窗口主题色"
-      >
-        <span class="h-4 w-4 rounded-full border border-white/30" :style="{ backgroundColor: themeColor }" />
-        <input class="sr-only" type="color" :value="themeColor" @input="handleThemeColorInput" />
-      </label>
-    </section>
-
-    <section class="relative min-h-0 flex-1 overflow-hidden bg-[#050816]">
-      <aside
+  <n-config-provider :theme="darkTheme" :theme-overrides="naiveThemeOverrides" class="h-full w-full">
+    <main class="flex h-full w-full flex-col bg-background text-foreground">
+      <header
         v-if="!isMiniMode"
-        class="no-drag group absolute inset-y-0 left-0 z-30 flex w-64 -translate-x-[calc(100%-0.75rem)] transition-transform duration-200 ease-out hover:translate-x-0"
+        class="drag-region titlebar-glass relative flex h-11 shrink-0 items-center justify-center border-b border-border/70 shadow-[0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl"
       >
-        <div class="flex w-full flex-col border-r border-border bg-card/95 shadow-2xl backdrop-blur">
-          <div class="flex h-11 shrink-0 items-center justify-between border-b border-border px-3">
-            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              标签页
-            </span>
-            <button class="icon-button" title="新建标签" @click="handleNewTab()">
-              <Plus class="h-4 w-4" />
-            </button>
-          </div>
-
-          <div class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2 pr-3">
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              class="group/tab flex min-h-10 w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs transition"
-              :class="
-                tab.id === activeTabId
-                  ? 'border-border bg-background text-foreground shadow-sm'
-                  : 'border-transparent bg-secondary/35 text-muted-foreground hover:bg-secondary hover:text-foreground'
-              "
-              @click="setActiveTab(tab.id)"
-            >
-              <Loader2 v-if="tab.loading" class="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
-              <Globe2 v-else class="h-3.5 w-3.5 shrink-0" />
-              <span class="min-w-0 flex-1 truncate">{{ tab.title || '新标签页' }}</span>
-              <span
-                class="flex h-5 w-5 shrink-0 items-center justify-center rounded opacity-60 hover:bg-muted hover:opacity-100"
-                @click.stop="closeTab(tab.id)"
-              >
-                <X class="h-3.5 w-3.5" />
-              </span>
-            </button>
-          </div>
+        <div class="pointer-events-none text-sm font-semibold tracking-wide">
+          <span>MiniSurf</span>
         </div>
-        <div class="w-3 bg-primary/35 transition group-hover:bg-transparent" />
-      </aside>
 
-      <webview
-        v-for="tab in tabs"
-        :key="tab.id"
-        :ref="(el) => bindWebview(el as Element | null, tab)"
-        class="absolute inset-0"
-        :class="tab.id === activeTabId ? 'z-10 flex' : 'z-0 hidden'"
-        :src="tab.url"
-        allowpopups
-      />
-    </section>
-  </main>
+        <div class="no-drag absolute left-0 flex shrink-0 items-center gap-2 px-3">
+          <button class="window-traffic-button window-traffic-close" title="最小化到托盘" @click="closeWindow" />
+          <button class="window-traffic-button window-traffic-minimize" title="最小化" @click="minimizeWindow" />
+          <button
+            class="window-traffic-button window-traffic-maximize"
+            :title="isMaximized ? '还原' : '最大化'"
+            @click="toggleMaximizeWindow"
+          />
+        </div>
+      </header>
+
+      <section
+        v-if="!isMiniMode"
+        class="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background/90 px-3"
+      >
+        <n-button quaternary circle :disabled="!activeTab?.canGoBack" title="后退" @click="goBack">
+          <template #icon>
+            <ArrowLeft class="h-4 w-4" />
+          </template>
+        </n-button>
+        <n-button quaternary circle :disabled="!activeTab?.canGoForward" title="前进" @click="goForward">
+          <template #icon>
+            <ArrowRight class="h-4 w-4" />
+          </template>
+        </n-button>
+        <n-button quaternary circle title="刷新" @click="reload">
+          <template #icon>
+            <RefreshCw class="h-4 w-4" :class="activeTab?.loading ? 'animate-spin text-primary' : ''" />
+          </template>
+        </n-button>
+
+        <form class="flex min-w-0 flex-1" @submit.prevent="submitAddress">
+          <n-input
+            v-model:value="addressValue"
+            class="address-input"
+            size="medium"
+            spellcheck="false"
+            placeholder="输入网址或搜索内容"
+          />
+        </form>
+
+        <n-button class="hidden sm:inline-flex" secondary title="Alt+2 切换迷你模式" @click="toggleMiniMode">
+          <template #icon>
+            <MousePointer2 v-if="isMiniMode" class="h-4 w-4 text-primary" />
+            <PanelBottomClose v-else class="h-4 w-4" />
+          </template>
+          {{ isMiniMode ? '穿透中' : '迷你' }}
+        </n-button>
+
+        <n-button quaternary circle title="设置" @click="isSettingsOpen = true">
+          <template #icon>
+            <Settings class="h-4 w-4" />
+          </template>
+        </n-button>
+      </section>
+
+      <n-modal
+        v-model:show="isSettingsOpen"
+        preset="card"
+        title="设置"
+        class="settings-modal"
+        :bordered="false"
+        size="small"
+      >
+        <n-space vertical size="large">
+          <div class="settings-row">
+            <div class="settings-title">主题色</div>
+            <n-color-picker
+              class="theme-color-picker"
+              :value="themeColor"
+              :show-alpha="false"
+              :modes="['hex']"
+              @update:value="applyThemeColor"
+            />
+          </div>
+        </n-space>
+      </n-modal>
+
+      <section class="relative min-h-0 flex-1 overflow-hidden bg-[#050816]">
+        <aside
+          v-if="!isMiniMode"
+          class="no-drag group absolute inset-y-0 left-0 z-30 flex w-64 -translate-x-[calc(100%-0.75rem)] transition-transform duration-200 ease-out hover:translate-x-0"
+        >
+          <div class="flex w-full flex-col border-r border-border bg-card/95 shadow-2xl backdrop-blur">
+            <div class="flex h-11 shrink-0 items-center justify-between border-b border-border px-3">
+              <span class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                标签页
+              </span>
+              <n-button quaternary circle title="新建标签" @click="handleNewTab()">
+                <template #icon>
+                  <Plus class="h-4 w-4" />
+                </template>
+              </n-button>
+            </div>
+
+            <n-scrollbar class="min-h-0 flex-1">
+              <div class="flex flex-col gap-1 p-2 pr-3">
+                <n-button
+                  v-for="tab in tabs"
+                  :key="tab.id"
+                  class="tab-button"
+                  :class="tab.id === activeTabId ? 'is-active' : ''"
+                  text-color="inherit"
+                  @click="setActiveTab(tab.id)"
+                >
+                  <template #icon>
+                    <Loader2 v-if="tab.loading" class="h-3.5 w-3.5 animate-spin text-primary" />
+                    <Globe2 v-else class="h-3.5 w-3.5" />
+                  </template>
+                  <span class="min-w-0 flex-1 truncate text-left">{{ tab.title || '新标签页' }}</span>
+                  <span
+                    class="tab-close ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded opacity-60 hover:opacity-100"
+                    @click.stop="closeTab(tab.id)"
+                  >
+                    <X class="h-3.5 w-3.5" />
+                  </span>
+                </n-button>
+              </div>
+            </n-scrollbar>
+          </div>
+          <div class="w-3 bg-primary/35 transition group-hover:bg-transparent" />
+        </aside>
+
+        <webview
+          v-for="tab in tabs"
+          :key="tab.id"
+          :ref="(el) => bindWebview(el as Element | null, tab)"
+          class="absolute inset-0"
+          :class="tab.id === activeTabId ? 'z-10 flex' : 'z-0 hidden'"
+          :src="tab.url"
+          allowpopups
+        />
+      </section>
+    </main>
+  </n-config-provider>
 </template>
