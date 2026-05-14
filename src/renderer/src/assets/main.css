@@ -1,0 +1,37 @@
+@import './base.css';
+
+@tailwind components;
+@tailwind utilities;
+
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+webview {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background: #050816;
+}
+
+@layer components {
+  .icon-button {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-35;
+  }
+
+  .window-button {
+    @apply inline-flex h-8 w-10 items-center justify-center text-muted-foreground transition hover:bg-secondary hover:text-foreground;
+  }
+
+  .window-button-danger {
+    @apply inline-flex h-8 w-10 items-center justify-center text-muted-foreground transition hover:bg-destructive hover:text-destructive-foreground;
+  }
+
+  .browser-input {
+    @apply h-9 w-full rounded-md border border-input bg-background/80 px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-ring/35;
+  }
+}
