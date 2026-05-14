@@ -375,40 +375,13 @@ onUnmounted(() => {
       v-if="!isMiniMode"
       class="drag-region flex h-11 shrink-0 items-center border-b border-border bg-card/95 shadow-[0_1px_0_rgba(255,255,255,0.03)]"
     >
-      <div class="flex w-44 items-center gap-2 px-3 text-sm font-semibold tracking-wide">
+      <div class="flex flex-1 items-center gap-2 px-3 text-sm font-semibold tracking-wide">
         <div
           class="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground"
         >
           <Globe2 class="h-4 w-4" />
         </div>
         <span>MiniSurf</span>
-      </div>
-
-      <div class="no-drag flex min-w-0 flex-1 items-end gap-1 self-end overflow-hidden px-1">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          class="group flex h-9 min-w-28 max-w-56 flex-1 items-center gap-2 rounded-t-lg border border-b-0 px-3 text-left text-xs transition"
-          :class="
-            tab.id === activeTabId
-              ? 'border-border bg-background text-foreground'
-              : 'border-transparent bg-secondary/45 text-muted-foreground hover:bg-secondary hover:text-foreground'
-          "
-          @click="setActiveTab(tab.id)"
-        >
-          <Loader2 v-if="tab.loading" class="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
-          <Globe2 v-else class="h-3.5 w-3.5 shrink-0" />
-          <span class="min-w-0 flex-1 truncate">{{ tab.title || '新标签页' }}</span>
-          <span
-            class="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-muted"
-            @click.stop="closeTab(tab.id)"
-          >
-            <X class="h-3.5 w-3.5" />
-          </span>
-        </button>
-        <button class="icon-button mb-1 shrink-0" title="新建标签" @click="handleNewTab()">
-          <Plus class="h-4 w-4" />
-        </button>
       </div>
 
       <div class="no-drag ml-2 flex shrink-0 items-center">
@@ -464,7 +437,48 @@ onUnmounted(() => {
       </button>
     </section>
 
-    <section class="relative min-h-0 flex-1 bg-[#050816]">
+    <section class="relative min-h-0 flex-1 overflow-hidden bg-[#050816]">
+      <aside
+        v-if="!isMiniMode"
+        class="no-drag group absolute inset-y-0 left-0 z-30 flex w-64 -translate-x-[calc(100%-0.75rem)] transition-transform duration-200 ease-out hover:translate-x-0"
+      >
+        <div class="flex w-full flex-col border-r border-border bg-card/95 shadow-2xl backdrop-blur">
+          <div class="flex h-11 shrink-0 items-center justify-between border-b border-border px-3">
+            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              标签页
+            </span>
+            <button class="icon-button" title="新建标签" @click="handleNewTab()">
+              <Plus class="h-4 w-4" />
+            </button>
+          </div>
+
+          <div class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2 pr-3">
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              class="group/tab flex min-h-10 w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs transition"
+              :class="
+                tab.id === activeTabId
+                  ? 'border-border bg-background text-foreground shadow-sm'
+                  : 'border-transparent bg-secondary/35 text-muted-foreground hover:bg-secondary hover:text-foreground'
+              "
+              @click="setActiveTab(tab.id)"
+            >
+              <Loader2 v-if="tab.loading" class="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
+              <Globe2 v-else class="h-3.5 w-3.5 shrink-0" />
+              <span class="min-w-0 flex-1 truncate">{{ tab.title || '新标签页' }}</span>
+              <span
+                class="flex h-5 w-5 shrink-0 items-center justify-center rounded opacity-60 hover:bg-muted hover:opacity-100"
+                @click.stop="closeTab(tab.id)"
+              >
+                <X class="h-3.5 w-3.5" />
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="w-3 bg-primary/35 transition group-hover:bg-transparent" />
+      </aside>
+
       <webview
         v-for="tab in tabs"
         :key="tab.id"
