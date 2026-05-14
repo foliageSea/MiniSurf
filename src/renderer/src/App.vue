@@ -166,6 +166,94 @@ function updateNavigationState(tab: BrowserTab, webview: WebviewElement): void {
   saveTabs()
 }
 
+function applyWebviewScrollbarTheme(webview: WebviewElement): void {
+  void webview
+    .executeJavaScript(`
+      (() => {
+        const styleId = 'minisurf-scrollbar-theme';
+        const existing = document.getElementById(styleId);
+        if (existing) return;
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = \`
+          :root {
+            scrollbar-color: transparent transparent;
+            scrollbar-width: thin;
+          }
+
+          :root.minisurf-scrolling,
+          :root.minisurf-scrollbar-hover {
+            scrollbar-color: rgba(148, 163, 184, 0.55) rgba(15, 23, 42, 0.18);
+          }
+
+          ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+          }
+
+          ::-webkit-scrollbar-track {
+            background: transparent;
+            transition: background 180ms ease;
+          }
+
+          :root.minisurf-scrolling ::-webkit-scrollbar-track,
+          :root.minisurf-scrollbar-hover ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.16);
+          }
+
+          ::-webkit-scrollbar-thumb {
+            min-height: 44px;
+            border: 2px solid transparent;
+            border-radius: 999px;
+            background: transparent;
+            background-clip: padding-box, border-box;
+            transition: background 180ms ease;
+          }
+
+          :root.minisurf-scrolling ::-webkit-scrollbar-thumb,
+          :root.minisurf-scrollbar-hover ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(56, 189, 248, 0.72), rgba(139, 92, 246, 0.72)) border-box;
+            background-clip: padding-box, border-box;
+          }
+
+          ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, rgba(125, 211, 252, 0.92), rgba(167, 139, 250, 0.92)) border-box;
+            background-clip: padding-box, border-box;
+          }
+
+          ::-webkit-scrollbar-corner {
+            background: transparent;
+          }
+        \`;
+        document.documentElement.appendChild(style);
+
+        let scrollTimer;
+        const root = document.documentElement;
+        const showScrollbar = () => {
+          root.classList.add('minisurf-scrolling');
+          window.clearTimeout(scrollTimer);
+          scrollTimer = window.setTimeout(() => {
+            root.classList.remove('minisurf-scrolling');
+          }, 900);
+        };
+
+        window.addEventListener('scroll', showScrollbar, { passive: true, capture: true });
+        document.addEventListener('mouseover', (event) => {
+          if (event.target === root || event.target === document.body) {
+            root.classList.add('minisurf-scrollbar-hover');
+          }
+        });
+        document.addEventListener('mouseout', (event) => {
+          if (event.target === root || event.target === document.body) {
+            root.classList.remove('minisurf-scrollbar-hover');
+          }
+        });
+      })();
+    `)
+    .catch(() => {})
+}
+
 function bindWebview(el: Element | null, tab: BrowserTab): void {
   if (!el || webviews.has(tab.id)) return
 
@@ -178,6 +266,7 @@ function bindWebview(el: Element | null, tab: BrowserTab): void {
   webview.addEventListener('did-stop-loading', () => {
     tab.loading = false
     updateNavigationState(tab, webview)
+    applyWebviewScrollbarTheme(webview)
   })
   webview.addEventListener('did-navigate', () => updateNavigationState(tab, webview))
   webview.addEventListener('did-navigate-in-page', () => updateNavigationState(tab, webview))
