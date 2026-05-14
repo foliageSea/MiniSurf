@@ -10,6 +10,7 @@ export interface MiniSurfAPI {
   onWindowMaximizedChange: (callback: (maximized: boolean) => void) => () => void
   onMiniModeChange: (callback: (enabled: boolean) => void) => () => void
   onToggleActiveVideo: (callback: () => void) => () => void
+  onFullscreenActiveVideo: (callback: () => void) => () => void
   onOpenUrlInNewTab: (callback: (url: string) => void) => () => void
 }
 

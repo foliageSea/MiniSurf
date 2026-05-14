@@ -210,6 +210,10 @@ app.whenReady().then(() => {
     toggleMiniMode()
   })
 
+  globalShortcut.register('Alt+3', () => {
+    sendToRenderer('media:fullscreen-active-video')
+  })
+
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
     else mainWindow?.show()

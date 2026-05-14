@@ -382,6 +382,48 @@ function toggleActiveVideo(): void {
   `)
 }
 
+function fullscreenActiveVideo(): void {
+  getActiveWebview()?.executeJavaScript(`
+    (() => {
+      const selectors = [
+        '[aria-label*="网页全屏"]',
+        '[title*="网页全屏"]',
+        '[data-title*="网页全屏"]',
+        '.bpx-player-ctrl-web',
+        '.bilibili-player-video-web-fullscreen',
+        '.squirtle-video-webfullscreen'
+      ];
+      const isVisible = (element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const control = selectors
+        .flatMap((selector) => [...document.querySelectorAll(selector)])
+        .find(isVisible);
+
+      if (control) {
+        control.click();
+        return true;
+      }
+
+      const target = document.querySelector('.bpx-player-container, .bilibili-player, video') || document.body;
+      target.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'w',
+        code: 'KeyW',
+        bubbles: true,
+        cancelable: true
+      }));
+      target.dispatchEvent(new KeyboardEvent('keyup', {
+        key: 'w',
+        code: 'KeyW',
+        bubbles: true,
+        cancelable: true
+      }));
+      return true;
+    })();
+  `)
+}
+
 function handleNewTab(url?: string): void {
   openTab(url ? normalizeUrl(url) : defaultHome.value)
 }
@@ -412,6 +454,7 @@ onMounted(async () => {
       isMiniMode.value = value
     }),
     window.api.onToggleActiveVideo(toggleActiveVideo),
+    window.api.onFullscreenActiveVideo(fullscreenActiveVideo),
     window.api.onOpenUrlInNewTab((url) => handleNewTab(url))
   )
 })
