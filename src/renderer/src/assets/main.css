@@ -40,14 +40,26 @@ webview {
   transition:
     background 160ms ease,
     border-color 160ms ease,
-    color 160ms ease;
+    color 160ms ease,
+    box-shadow 160ms ease;
 }
 
-.tab-button.n-button:hover,
-.tab-button.n-button.is-active {
+.tab-button.n-button:hover {
   border-color: hsl(var(--border));
   background: hsl(var(--background));
   color: hsl(var(--foreground));
+}
+
+.tab-button.n-button.is-active {
+  border-color: hsl(var(--primary) / 0.58);
+  background: linear-gradient(90deg, hsl(var(--primary) / 0.24), hsl(var(--primary) / 0.1));
+  color: hsl(var(--foreground));
+  box-shadow: inset 3px 0 0 hsl(var(--primary));
+}
+
+.tab-button.n-button.is-active:hover {
+  border-color: hsl(var(--primary) / 0.68);
+  background: linear-gradient(90deg, hsl(var(--primary) / 0.3), hsl(var(--primary) / 0.14));
 }
 
 .tab-button .n-button__content {
