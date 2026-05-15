@@ -26,6 +26,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 
 type BrowserTab = {
   id: string
+  initialUrl: string
   url: string
   title: string
   loading: boolean
@@ -200,6 +201,7 @@ function loadPersistedTabs(): boolean {
       tabs.length,
       ...parsed.tabs.map((tab) => ({
         id: tab.id || createId(),
+        initialUrl: tab.url || defaultHome.value,
         url: tab.url || defaultHome.value,
         title: tab.title || '新标签页',
         loading: false,
@@ -219,6 +221,7 @@ function loadPersistedTabs(): boolean {
 function openTab(url = defaultHome.value, activate = true): BrowserTab {
   const tab: BrowserTab = {
     id: createId(),
+    initialUrl: url,
     url,
     title: '新标签页',
     loading: false,
@@ -235,6 +238,7 @@ function openTab(url = defaultHome.value, activate = true): BrowserTab {
 function closeTab(id: string): void {
   if (tabs.length === 1) {
     const tab = tabs[0]
+    tab.initialUrl = defaultHome.value
     tab.url = defaultHome.value
     tab.title = '新标签页'
     tab.loading = false
@@ -664,7 +668,7 @@ onUnmounted(() => {
           :ref="(el) => bindWebview(el as Element | null, tab)"
           class="absolute inset-0"
           :class="tab.id === activeTabId ? 'z-10 flex' : 'z-0 hidden'"
-          :src="tab.url"
+          :src="tab.initialUrl"
           allowpopups
         />
       </section>
