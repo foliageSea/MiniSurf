@@ -34,6 +34,11 @@ const api = {
     const listener = (_event: Electron.IpcRendererEvent, url: string): void => callback(url)
     ipcRenderer.on('tabs:open-url', listener)
     return () => ipcRenderer.removeListener('tabs:open-url', listener)
+  },
+  onCloseActiveTab: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('tabs:close-active', listener)
+    return () => ipcRenderer.removeListener('tabs:close-active', listener)
   }
 }
 

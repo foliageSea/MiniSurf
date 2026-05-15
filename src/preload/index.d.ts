@@ -12,6 +12,7 @@ export interface MiniSurfAPI {
   onToggleActiveVideo: (callback: () => void) => () => void
   onFullscreenActiveVideo: (callback: () => void) => () => void
   onOpenUrlInNewTab: (callback: (url: string) => void) => () => void
+  onCloseActiveTab: (callback: () => void) => () => void
 }
 
 declare global {

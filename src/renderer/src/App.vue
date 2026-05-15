@@ -4,8 +4,6 @@ import {
   ArrowRight,
   Globe2,
   Loader2,
-  MousePointer2,
-  PanelBottomClose,
   Plus,
   RefreshCw,
   Settings,
@@ -430,10 +428,6 @@ function closeWindow(): void {
   window.api.closeWindow()
 }
 
-function toggleMiniMode(): void {
-  window.api.toggleMiniMode()
-}
-
 function toggleActiveVideo(): void {
   getActiveWebview()?.executeJavaScript(`
     (() => {
@@ -492,6 +486,10 @@ function handleNewTab(url?: string): void {
   openTab(url ? normalizeUrl(url) : defaultHome.value)
 }
 
+function closeActiveTab(): void {
+  if (activeTabId.value) closeTab(activeTabId.value)
+}
+
 watch(
   () => activeTab.value?.url,
   (url) => {
@@ -519,7 +517,8 @@ onMounted(async () => {
     }),
     window.api.onToggleActiveVideo(toggleActiveVideo),
     window.api.onFullscreenActiveVideo(fullscreenActiveVideo),
-    window.api.onOpenUrlInNewTab((url) => handleNewTab(url))
+    window.api.onOpenUrlInNewTab((url) => handleNewTab(url)),
+    window.api.onCloseActiveTab(closeActiveTab)
   )
 })
 
@@ -579,14 +578,6 @@ onUnmounted(() => {
             placeholder="输入网址或搜索内容"
           />
         </form>
-
-        <n-button class="hidden sm:inline-flex" secondary title="Alt+2 切换迷你模式" @click="toggleMiniMode">
-          <template #icon>
-            <MousePointer2 v-if="isMiniMode" class="h-4 w-4 text-primary" />
-            <PanelBottomClose v-else class="h-4 w-4" />
-          </template>
-          {{ isMiniMode ? '穿透中' : '迷你' }}
-        </n-button>
 
         <n-button quaternary circle title="设置" @click="isSettingsOpen = true">
           <template #icon>

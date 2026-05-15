@@ -36,6 +36,17 @@ function isWebUrl(url: string): boolean {
   return /^https?:\/\//i.test(url)
 }
 
+function isCloseTabShortcut(input: Electron.Input): boolean {
+  return (
+    input.type === 'keyDown' &&
+    input.control &&
+    !input.alt &&
+    !input.meta &&
+    !input.shift &&
+    input.key.toLowerCase() === 'w'
+  )
+}
+
 function createTray(): void {
   if (tray) return
 
@@ -121,6 +132,13 @@ function updateMaximizedState(): void {
 }
 
 function attachWebContentsHandlers(webContents: WebContents): void {
+  webContents.on('before-input-event', (event, input) => {
+    if (!isCloseTabShortcut(input)) return
+
+    event.preventDefault()
+    sendToRenderer('tabs:close-active')
+  })
+
   webContents.setWindowOpenHandler((details) => {
     if (isWebUrl(details.url)) {
       sendToRenderer('tabs:open-url', details.url)
