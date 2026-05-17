@@ -101,6 +101,41 @@ webview {
   color: hsl(var(--foreground));
 }
 
+.mini-mode-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 40;
+  display: flex;
+  height: 28px;
+  width: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(15, 23, 42, 0.28);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.56);
+  color: rgba(248, 250, 252, 0.88);
+  opacity: 0.72;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(10px);
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.mini-mode-close:hover {
+  background: rgba(239, 68, 68, 0.88);
+  color: #fff;
+  opacity: 1;
+  transform: scale(1.04);
+}
+
+.mini-mode-close:active {
+  transform: scale(0.96);
+}
+
 @layer components {
   .window-traffic-button {
     @apply h-3 w-3 rounded-full border border-black/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition hover:brightness-110 active:brightness-90;

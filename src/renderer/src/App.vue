@@ -61,8 +61,10 @@ const themeColor = ref(DEFAULT_THEME_COLOR)
 const isMaximized = ref(false)
 const isMiniMode = ref(false)
 const isSettingsOpen = ref(false)
+const miniCloseButton = ref<HTMLButtonElement | null>(null)
 const webviews = new Map<string, WebviewElement>()
 const cleanupCallbacks: Array<() => void> = []
+let miniControlsInteractive = false
 
 const activeTab = computed(() => tabs.find((tab) => tab.id === activeTabId.value) ?? tabs[0])
 const naiveThemeOverrides = computed<GlobalThemeOverrides>(() => ({
@@ -428,6 +430,33 @@ function closeWindow(): void {
   window.api.closeWindow()
 }
 
+function setMiniControlsInteractive(interactive: boolean): void {
+  if (miniControlsInteractive === interactive) return
+
+  miniControlsInteractive = interactive
+  window.api.setMiniModeControlsInteractive(interactive)
+}
+
+function updateMiniControlsInteractivity(event: MouseEvent): void {
+  if (!isMiniMode.value || !miniCloseButton.value) {
+    setMiniControlsInteractive(false)
+    return
+  }
+
+  const rect = miniCloseButton.value.getBoundingClientRect()
+  const isInsideCloseButton =
+    event.clientX >= rect.left &&
+    event.clientX <= rect.right &&
+    event.clientY >= rect.top &&
+    event.clientY <= rect.bottom
+
+  setMiniControlsInteractive(isInsideCloseButton)
+}
+
+function disableMiniControlsInteractivity(): void {
+  setMiniControlsInteractive(false)
+}
+
 function toggleActiveVideo(): void {
   getActiveWebview()?.executeJavaScript(`
     (() => {
@@ -514,12 +543,22 @@ onMounted(async () => {
     }),
     window.api.onMiniModeChange((value) => {
       isMiniMode.value = value
+      if (value) miniControlsInteractive = false
+      else disableMiniControlsInteractivity()
     }),
     window.api.onToggleActiveVideo(toggleActiveVideo),
     window.api.onFullscreenActiveVideo(fullscreenActiveVideo),
     window.api.onOpenUrlInNewTab((url) => handleNewTab(url)),
     window.api.onCloseActiveTab(closeActiveTab)
   )
+
+  window.addEventListener('mousemove', updateMiniControlsInteractivity)
+  window.addEventListener('mouseleave', disableMiniControlsInteractivity)
+  cleanupCallbacks.push(() => {
+    window.removeEventListener('mousemove', updateMiniControlsInteractivity)
+    window.removeEventListener('mouseleave', disableMiniControlsInteractivity)
+    disableMiniControlsInteractivity()
+  })
 })
 
 onUnmounted(() => {
@@ -609,6 +648,16 @@ onUnmounted(() => {
       </n-modal>
 
       <section class="relative min-h-0 flex-1 overflow-hidden bg-[#050816]">
+        <button
+          v-if="isMiniMode"
+          ref="miniCloseButton"
+          class="mini-mode-close no-drag"
+          title="最小化到托盘"
+          @click="closeWindow"
+        >
+          <X class="h-3.5 w-3.5" />
+        </button>
+
         <aside
           v-if="!isMiniMode"
           class="no-drag group absolute inset-y-0 left-0 z-30 flex w-64 -translate-x-[calc(100%-0.75rem)] transition-transform duration-200 ease-out hover:translate-x-0"

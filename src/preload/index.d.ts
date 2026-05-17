@@ -4,6 +4,7 @@ export interface MiniSurfAPI {
   minimizeWindow: () => Promise<void>
   toggleMaximizeWindow: () => Promise<boolean>
   closeWindow: () => Promise<void>
+  setMiniModeControlsInteractive: (interactive: boolean) => Promise<void>
   showWindow: () => Promise<void>
   toggleMiniMode: () => Promise<void>
   getDefaultHome: () => Promise<string>

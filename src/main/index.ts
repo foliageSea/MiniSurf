@@ -127,6 +127,13 @@ function toggleMiniMode(): void {
   sendToRenderer('window:mini-mode-changed', isMiniMode)
 }
 
+function setMiniModeControlsInteractive(interactive: boolean): void {
+  if (!mainWindow || mainWindow.isDestroyed() || !isMiniMode) return
+
+  if (interactive) mainWindow.setIgnoreMouseEvents(false)
+  else mainWindow.setIgnoreMouseEvents(true, { forward: true })
+}
+
 function updateMaximizedState(): void {
   sendToRenderer('window:maximized-changed', mainWindow?.isMaximized() ?? false)
 }
@@ -209,6 +216,9 @@ app.whenReady().then(() => {
     return mainWindow.isMaximized()
   })
   ipcMain.handle('window:close', () => mainWindow?.close())
+  ipcMain.handle('window:set-mini-controls-interactive', (_event, interactive: boolean) => {
+    setMiniModeControlsInteractive(interactive)
+  })
   ipcMain.handle('window:show', () => {
     if (isMiniMode) toggleMiniMode()
     mainWindow?.show()
