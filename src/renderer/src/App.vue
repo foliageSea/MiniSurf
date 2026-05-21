@@ -28,6 +28,7 @@ type BrowserTab = {
   url: string
   title: string
   loading: boolean
+  loaded: boolean
   canGoBack: boolean
   canGoForward: boolean
 }
@@ -67,6 +68,7 @@ const cleanupCallbacks: Array<() => void> = []
 let miniControlsInteractive = false
 
 const activeTab = computed(() => tabs.find((tab) => tab.id === activeTabId.value) ?? tabs[0])
+const loadedTabs = computed(() => tabs.filter((tab) => tab.loaded))
 const naiveThemeOverrides = computed<GlobalThemeOverrides>(() => ({
   common: {
     primaryColor: themeColor.value,
@@ -205,6 +207,7 @@ function loadPersistedTabs(): boolean {
         url: tab.url || defaultHome.value,
         title: tab.title || '新标签页',
         loading: false,
+        loaded: false,
         canGoBack: false,
         canGoForward: false
       }))
@@ -212,6 +215,8 @@ function loadPersistedTabs(): boolean {
     activeTabId.value = tabs.some((tab) => tab.id === parsed.activeTabId)
       ? parsed.activeTabId
       : tabs[0].id
+    const active = tabs.find((tab) => tab.id === activeTabId.value)
+    if (active) active.loaded = true
     return true
   } catch {
     return false
@@ -225,6 +230,7 @@ function openTab(url = defaultHome.value, activate = true): BrowserTab {
     url,
     title: '新标签页',
     loading: false,
+    loaded: activate,
     canGoBack: false,
     canGoForward: false
   }
@@ -242,6 +248,7 @@ function closeTab(id: string): void {
     tab.url = defaultHome.value
     tab.title = '新标签页'
     tab.loading = false
+    tab.loaded = true
     tab.canGoBack = false
     tab.canGoForward = false
     const webview = webviews.get(tab.id)
@@ -258,11 +265,17 @@ function closeTab(id: string): void {
 
   if (activeTabId.value === id) {
     activeTabId.value = tabs[Math.max(0, index - 1)]?.id ?? tabs[0].id
+    const active = tabs.find((tab) => tab.id === activeTabId.value)
+    if (active) active.loaded = true
   }
   saveTabs()
 }
 
 function setActiveTab(id: string): void {
+  const tab = tabs.find((item) => item.id === id)
+  if (!tab) return
+
+  tab.loaded = true
   activeTabId.value = id
   saveTabs()
 }
@@ -717,7 +730,7 @@ onUnmounted(() => {
         </aside>
 
         <webview
-          v-for="tab in tabs"
+          v-for="tab in loadedTabs"
           :key="tab.id"
           :ref="(el) => bindWebview(el as Element | null, tab)"
           class="absolute inset-0"
