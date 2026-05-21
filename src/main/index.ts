@@ -242,6 +242,14 @@ app.whenReady().then(() => {
     sendToRenderer('media:fullscreen-active-video')
   })
 
+  globalShortcut.register('Alt+J', () => {
+    sendToRenderer('media:seek-active-video', -2)
+  })
+
+  globalShortcut.register('Alt+K', () => {
+    sendToRenderer('media:seek-active-video', 2)
+  })
+
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
     else mainWindow?.show()

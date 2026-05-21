@@ -32,6 +32,11 @@ const api = {
     ipcRenderer.on('media:fullscreen-active-video', listener)
     return () => ipcRenderer.removeListener('media:fullscreen-active-video', listener)
   },
+  onSeekActiveVideo: (callback: (seconds: number) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, seconds: number): void => callback(seconds)
+    ipcRenderer.on('media:seek-active-video', listener)
+    return () => ipcRenderer.removeListener('media:seek-active-video', listener)
+  },
   onOpenUrlInNewTab: (callback: (url: string) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, url: string): void => callback(url)
     ipcRenderer.on('tabs:open-url', listener)

@@ -511,6 +511,19 @@ function fullscreenActiveVideo(): void {
   `)
 }
 
+function seekActiveVideo(seconds: number): void {
+  getActiveWebview()?.executeJavaScript(`
+    (() => {
+      const video = document.querySelector('video');
+      if (!video) return false;
+
+      const duration = Number.isFinite(video.duration) ? video.duration : Infinity;
+      video.currentTime = Math.max(0, Math.min(duration, video.currentTime + ${seconds}));
+      return true;
+    })();
+  `)
+}
+
 function handleNewTab(url?: string): void {
   openTab(url ? normalizeUrl(url) : defaultHome.value)
 }
@@ -548,6 +561,7 @@ onMounted(async () => {
     }),
     window.api.onToggleActiveVideo(toggleActiveVideo),
     window.api.onFullscreenActiveVideo(fullscreenActiveVideo),
+    window.api.onSeekActiveVideo(seekActiveVideo),
     window.api.onOpenUrlInNewTab((url) => handleNewTab(url)),
     window.api.onCloseActiveTab(closeActiveTab)
   )
