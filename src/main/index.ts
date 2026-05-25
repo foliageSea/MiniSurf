@@ -18,10 +18,13 @@ const DEFAULT_HOME = 'https://www.bilibili.com'
 const MINI_WIDTH = 480
 const MINI_HEIGHT = 300
 
+type MiniModePosition = 'left' | 'right'
+
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
 let isMiniMode = false
+let miniModePosition: MiniModePosition = 'left'
 let previousWindowState: {
   bounds: Electron.Rectangle
   maximized: boolean
@@ -84,6 +87,29 @@ function createTray(): void {
   tray.on('double-click', showWindow)
 }
 
+function getMiniModeBounds(): Electron.Rectangle | null {
+  if (!mainWindow || mainWindow.isDestroyed()) return null
+
+  const display = screen.getDisplayMatching(mainWindow.getBounds())
+  const { x, y, width, height } = display.workArea
+
+  return {
+    x: miniModePosition === 'right' ? x + width - MINI_WIDTH : x,
+    y: y + height - MINI_HEIGHT,
+    width: MINI_WIDTH,
+    height: MINI_HEIGHT
+  }
+}
+
+function setMiniModePosition(position: unknown): void {
+  miniModePosition = position === 'right' ? 'right' : 'left'
+
+  if (!isMiniMode || !mainWindow || mainWindow.isDestroyed()) return
+
+  const bounds = getMiniModeBounds()
+  if (bounds) mainWindow.setBounds(bounds)
+}
+
 function toggleMiniMode(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
 
@@ -95,17 +121,10 @@ function toggleMiniMode(): void {
 
     if (previousWindowState.maximized) mainWindow.unmaximize()
 
-    const display = screen.getDisplayMatching(mainWindow.getBounds())
-    const { x, y, height } = display.workArea
-
     mainWindow.setResizable(false)
     mainWindow.setAlwaysOnTop(true, 'screen-saver')
-    mainWindow.setBounds({
-      x,
-      y: y + height - MINI_HEIGHT,
-      width: MINI_WIDTH,
-      height: MINI_HEIGHT
-    })
+    const bounds = getMiniModeBounds()
+    if (bounds) mainWindow.setBounds(bounds)
     mainWindow.setIgnoreMouseEvents(true, { forward: true })
     mainWindow.show()
     isMiniMode = true
@@ -218,6 +237,9 @@ app.whenReady().then(() => {
   ipcMain.handle('window:close', () => mainWindow?.close())
   ipcMain.handle('window:set-mini-controls-interactive', (_event, interactive: boolean) => {
     setMiniModeControlsInteractive(interactive)
+  })
+  ipcMain.handle('window:set-mini-position', (_event, position: unknown) => {
+    setMiniModePosition(position)
   })
   ipcMain.handle('window:show', () => {
     if (isMiniMode) toggleMiniMode()

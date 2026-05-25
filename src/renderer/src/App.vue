@@ -16,6 +16,8 @@ import {
   NConfigProvider,
   NInput,
   NModal,
+  NRadioButton,
+  NRadioGroup,
   NScrollbar,
   NSpace,
   type GlobalThemeOverrides
@@ -38,6 +40,8 @@ type PersistedState = {
   tabs: Pick<BrowserTab, 'id' | 'url' | 'title'>[]
 }
 
+type MiniModePosition = 'left' | 'right'
+
 type WebviewElement = HTMLElement & {
   src: string
   getURL: () => string
@@ -52,6 +56,7 @@ type WebviewElement = HTMLElement & {
 
 const STORAGE_KEY = 'minisurf.tabs'
 const THEME_COLOR_KEY = 'minisurf.themeColor'
+const MINI_POSITION_KEY = 'minisurf.miniPosition'
 const DEFAULT_THEME_COLOR = '#38bdf8'
 
 const tabs = reactive<BrowserTab[]>([])
@@ -59,6 +64,7 @@ const activeTabId = ref('')
 const addressValue = ref('')
 const defaultHome = ref('https://www.bilibili.com')
 const themeColor = ref(DEFAULT_THEME_COLOR)
+const miniModePosition = ref<MiniModePosition>('left')
 const isMaximized = ref(false)
 const isMiniMode = ref(false)
 const isSettingsOpen = ref(false)
@@ -170,6 +176,17 @@ function applyThemeColor(value: string): void {
 
 function loadThemeColor(): void {
   applyThemeColor(localStorage.getItem(THEME_COLOR_KEY) || DEFAULT_THEME_COLOR)
+}
+
+function applyMiniModePosition(value: string | number): void {
+  const position: MiniModePosition = value === 'right' ? 'right' : 'left'
+  miniModePosition.value = position
+  localStorage.setItem(MINI_POSITION_KEY, position)
+  window.api.setMiniModePosition(position)
+}
+
+function loadMiniModePosition(): void {
+  applyMiniModePosition(localStorage.getItem(MINI_POSITION_KEY) || 'left')
 }
 
 function normalizeUrl(value: string): string {
@@ -296,7 +313,8 @@ function updateNavigationState(tab: BrowserTab, webview: WebviewElement): void {
 
 function applyWebviewScrollbarTheme(webview: WebviewElement): void {
   void webview
-    .executeJavaScript(`
+    .executeJavaScript(
+      `
       (() => {
         const styleId = 'minisurf-scrollbar-theme';
         const existing = document.getElementById(styleId);
@@ -378,7 +396,8 @@ function applyWebviewScrollbarTheme(webview: WebviewElement): void {
           }
         });
       })();
-    `)
+    `
+    )
     .catch(() => {})
 }
 
@@ -559,6 +578,7 @@ watch(activeTabId, () => {
 
 onMounted(async () => {
   loadThemeColor()
+  loadMiniModePosition()
   defaultHome.value = await window.api.getDefaultHome()
   if (!loadPersistedTabs()) openTab(defaultHome.value)
   await nextTick()
@@ -594,7 +614,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <n-config-provider :theme="darkTheme" :theme-overrides="naiveThemeOverrides" class="h-full w-full">
+  <n-config-provider
+    :theme="darkTheme"
+    :theme-overrides="naiveThemeOverrides"
+    class="h-full w-full"
+  >
     <main class="flex h-full w-full flex-col bg-background text-foreground">
       <header
         v-if="!isMiniMode"
@@ -605,8 +629,16 @@ onUnmounted(() => {
         </div>
 
         <div class="no-drag absolute left-0 flex shrink-0 items-center gap-2 px-3">
-          <button class="window-traffic-button window-traffic-close" title="最小化到托盘" @click="closeWindow" />
-          <button class="window-traffic-button window-traffic-minimize" title="最小化" @click="minimizeWindow" />
+          <button
+            class="window-traffic-button window-traffic-close"
+            title="最小化到托盘"
+            @click="closeWindow"
+          />
+          <button
+            class="window-traffic-button window-traffic-minimize"
+            title="最小化"
+            @click="minimizeWindow"
+          />
           <button
             class="window-traffic-button window-traffic-maximize"
             :title="isMaximized ? '还原' : '最大化'"
@@ -624,14 +656,23 @@ onUnmounted(() => {
             <ArrowLeft class="h-4 w-4" />
           </template>
         </n-button>
-        <n-button quaternary circle :disabled="!activeTab?.canGoForward" title="前进" @click="goForward">
+        <n-button
+          quaternary
+          circle
+          :disabled="!activeTab?.canGoForward"
+          title="前进"
+          @click="goForward"
+        >
           <template #icon>
             <ArrowRight class="h-4 w-4" />
           </template>
         </n-button>
         <n-button quaternary circle title="刷新" @click="reload">
           <template #icon>
-            <RefreshCw class="h-4 w-4" :class="activeTab?.loading ? 'animate-spin text-primary' : ''" />
+            <RefreshCw
+              class="h-4 w-4"
+              :class="activeTab?.loading ? 'animate-spin text-primary' : ''"
+            />
           </template>
         </n-button>
 
@@ -671,6 +712,19 @@ onUnmounted(() => {
               @update:value="applyThemeColor"
             />
           </div>
+
+          <div class="settings-row">
+            <div class="settings-title">小窗位置</div>
+            <n-radio-group
+              v-model:value="miniModePosition"
+              class="mini-position-group"
+              button-style="solid"
+              @update:value="applyMiniModePosition"
+            >
+              <n-radio-button value="left">左下角</n-radio-button>
+              <n-radio-button value="right">右下角</n-radio-button>
+            </n-radio-group>
+          </div>
         </n-space>
       </n-modal>
 
@@ -689,8 +743,12 @@ onUnmounted(() => {
           v-if="!isMiniMode"
           class="no-drag group absolute inset-y-0 left-0 z-30 flex w-64 -translate-x-[calc(100%-0.75rem)] transition-transform duration-200 ease-out hover:translate-x-0"
         >
-          <div class="flex w-full flex-col border-r border-border bg-card/95 shadow-2xl backdrop-blur">
-            <div class="flex h-11 shrink-0 items-center justify-between border-b border-border px-3">
+          <div
+            class="flex w-full flex-col border-r border-border bg-card/95 shadow-2xl backdrop-blur"
+          >
+            <div
+              class="flex h-11 shrink-0 items-center justify-between border-b border-border px-3"
+            >
               <span class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 标签页
               </span>
@@ -715,7 +773,9 @@ onUnmounted(() => {
                     <Loader2 v-if="tab.loading" class="h-3.5 w-3.5 animate-spin text-primary" />
                     <Globe2 v-else class="h-3.5 w-3.5" />
                   </template>
-                  <span class="min-w-0 flex-1 truncate text-left">{{ tab.title || '新标签页' }}</span>
+                  <span class="min-w-0 flex-1 truncate text-left">{{
+                    tab.title || '新标签页'
+                  }}</span>
                   <span
                     class="tab-close ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded opacity-60 hover:opacity-100"
                     @click.stop="closeTab(tab.id)"

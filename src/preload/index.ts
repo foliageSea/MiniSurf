@@ -7,6 +7,8 @@ const api = {
   closeWindow: (): Promise<void> => ipcRenderer.invoke('window:close'),
   setMiniModeControlsInteractive: (interactive: boolean): Promise<void> =>
     ipcRenderer.invoke('window:set-mini-controls-interactive', interactive),
+  setMiniModePosition: (position: 'left' | 'right'): Promise<void> =>
+    ipcRenderer.invoke('window:set-mini-position', position),
   showWindow: (): Promise<void> => ipcRenderer.invoke('window:show'),
   toggleMiniMode: (): Promise<void> => ipcRenderer.invoke('window:toggle-mini-mode'),
   getDefaultHome: (): Promise<string> => ipcRenderer.invoke('app:get-default-home'),

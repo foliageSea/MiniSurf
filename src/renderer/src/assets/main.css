@@ -20,7 +20,13 @@ webview {
 
 .titlebar-glass {
   background:
-    linear-gradient(90deg, hsl(var(--primary) / 0.16), transparent 28%, transparent 72%, hsl(var(--primary) / 0.1)),
+    linear-gradient(
+      90deg,
+      hsl(var(--primary) / 0.16),
+      transparent 28%,
+      transparent 72%,
+      hsl(var(--primary) / 0.1)
+    ),
     hsl(var(--card) / 0.68);
 }
 
@@ -73,13 +79,17 @@ webview {
 }
 
 .theme-color-picker {
-  width: 132px;
-  min-width: 132px;
+  width: 104px;
+  min-width: 104px;
 }
 
 .theme-color-picker .n-color-picker-trigger {
   height: 36px;
   border-radius: 8px;
+}
+
+.mini-position-group {
+  min-width: 156px;
 }
 
 .settings-modal {
