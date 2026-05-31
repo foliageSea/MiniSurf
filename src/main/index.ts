@@ -50,6 +50,17 @@ function isCloseTabShortcut(input: Electron.Input): boolean {
   )
 }
 
+function isCloseWindowShortcut(input: Electron.Input): boolean {
+  return (
+    input.type === 'keyDown' &&
+    input.control &&
+    !input.alt &&
+    !input.meta &&
+    !input.shift &&
+    input.key.toLowerCase() === 'h'
+  )
+}
+
 function createTray(): void {
   if (tray) return
 
@@ -159,6 +170,12 @@ function updateMaximizedState(): void {
 
 function attachWebContentsHandlers(webContents: WebContents): void {
   webContents.on('before-input-event', (event, input) => {
+    if (isCloseWindowShortcut(input)) {
+      event.preventDefault()
+      mainWindow?.close()
+      return
+    }
+
     if (!isCloseTabShortcut(input)) return
 
     event.preventDefault()
