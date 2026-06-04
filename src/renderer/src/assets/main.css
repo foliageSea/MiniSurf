@@ -56,6 +56,16 @@ webview {
   color: hsl(var(--foreground));
 }
 
+.tab-button.n-button.is-dragging {
+  opacity: 0.55;
+}
+
+.tab-button.n-button.is-drag-over {
+  border-color: hsl(var(--primary) / 0.72);
+  background: hsl(var(--primary) / 0.16);
+  box-shadow: inset 3px 0 0 hsl(var(--primary));
+}
+
 .tab-button.n-button.is-active {
   border-color: hsl(var(--primary) / 0.58);
   background: linear-gradient(90deg, hsl(var(--primary) / 0.24), hsl(var(--primary) / 0.1));

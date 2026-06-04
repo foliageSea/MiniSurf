@@ -60,6 +60,7 @@ const MINI_POSITION_KEY = 'minisurf.miniPosition'
 const DEFAULT_THEME_COLOR = '#38bdf8'
 
 const tabs = reactive<BrowserTab[]>([])
+const loadedTabIds = reactive<string[]>([])
 const activeTabId = ref('')
 const addressValue = ref('')
 const defaultHome = ref('https://www.bilibili.com')
@@ -69,12 +70,18 @@ const isMaximized = ref(false)
 const isMiniMode = ref(false)
 const isSettingsOpen = ref(false)
 const miniCloseButton = ref<HTMLButtonElement | null>(null)
+const draggingTabId = ref('')
+const dragOverTabId = ref('')
 const webviews = new Map<string, WebviewElement>()
 const cleanupCallbacks: Array<() => void> = []
 let miniControlsInteractive = false
 
 const activeTab = computed(() => tabs.find((tab) => tab.id === activeTabId.value) ?? tabs[0])
-const loadedTabs = computed(() => tabs.filter((tab) => tab.loaded))
+const loadedTabs = computed(() =>
+  loadedTabIds
+    .map((id) => tabs.find((tab) => tab.id === id))
+    .filter((tab): tab is BrowserTab => Boolean(tab))
+)
 const naiveThemeOverrides = computed<GlobalThemeOverrides>(() => ({
   common: {
     primaryColor: themeColor.value,
@@ -207,6 +214,16 @@ function saveTabs(): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
 }
 
+function ensureTabLoaded(tab: BrowserTab): void {
+  tab.loaded = true
+  if (!loadedTabIds.includes(tab.id)) loadedTabIds.push(tab.id)
+}
+
+function forgetLoadedTab(id: string): void {
+  const index = loadedTabIds.indexOf(id)
+  if (index !== -1) loadedTabIds.splice(index, 1)
+}
+
 function loadPersistedTabs(): boolean {
   const raw = localStorage.getItem(STORAGE_KEY)
   if (!raw) return false
@@ -233,7 +250,7 @@ function loadPersistedTabs(): boolean {
       ? parsed.activeTabId
       : tabs[0].id
     const active = tabs.find((tab) => tab.id === activeTabId.value)
-    if (active) active.loaded = true
+    if (active) ensureTabLoaded(active)
     return true
   } catch {
     return false
@@ -247,13 +264,16 @@ function openTab(url = defaultHome.value, activate = true): BrowserTab {
     url,
     title: '新标签页',
     loading: false,
-    loaded: activate,
+    loaded: false,
     canGoBack: false,
     canGoForward: false
   }
 
   tabs.push(tab)
-  if (activate) activeTabId.value = tab.id
+  if (activate) {
+    activeTabId.value = tab.id
+    ensureTabLoaded(tab)
+  }
   saveTabs()
   return tab
 }
@@ -265,9 +285,9 @@ function closeTab(id: string): void {
     tab.url = defaultHome.value
     tab.title = '新标签页'
     tab.loading = false
-    tab.loaded = true
     tab.canGoBack = false
     tab.canGoForward = false
+    ensureTabLoaded(tab)
     const webview = webviews.get(tab.id)
     if (webview) webview.src = defaultHome.value
     saveTabs()
@@ -279,11 +299,12 @@ function closeTab(id: string): void {
 
   tabs.splice(index, 1)
   webviews.delete(id)
+  forgetLoadedTab(id)
 
   if (activeTabId.value === id) {
     activeTabId.value = tabs[Math.max(0, index - 1)]?.id ?? tabs[0].id
     const active = tabs.find((tab) => tab.id === activeTabId.value)
-    if (active) active.loaded = true
+    if (active) ensureTabLoaded(active)
   }
   saveTabs()
 }
@@ -292,9 +313,45 @@ function setActiveTab(id: string): void {
   const tab = tabs.find((item) => item.id === id)
   if (!tab) return
 
-  tab.loaded = true
+  ensureTabLoaded(tab)
   activeTabId.value = id
   saveTabs()
+}
+
+function moveTab(fromId: string, toId: string): void {
+  if (fromId === toId) return
+
+  const fromIndex = tabs.findIndex((tab) => tab.id === fromId)
+  const toIndex = tabs.findIndex((tab) => tab.id === toId)
+  if (fromIndex === -1 || toIndex === -1) return
+
+  const [tab] = tabs.splice(fromIndex, 1)
+  tabs.splice(toIndex, 0, tab)
+  saveTabs()
+}
+
+function startTabDrag(event: DragEvent, id: string): void {
+  draggingTabId.value = id
+  dragOverTabId.value = ''
+  event.dataTransfer?.setData('text/plain', id)
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+}
+
+function enterTabDrag(id: string): void {
+  if (!draggingTabId.value || draggingTabId.value === id) return
+  dragOverTabId.value = id
+}
+
+function dropTab(event: DragEvent, id: string): void {
+  const fromId = event.dataTransfer?.getData('text/plain') || draggingTabId.value
+  if (fromId) moveTab(fromId, id)
+  draggingTabId.value = ''
+  dragOverTabId.value = ''
+}
+
+function endTabDrag(): void {
+  draggingTabId.value = ''
+  dragOverTabId.value = ''
 }
 
 function getActiveWebview(): WebviewElement | undefined {
@@ -765,9 +822,19 @@ onUnmounted(() => {
                   v-for="tab in tabs"
                   :key="tab.id"
                   class="tab-button"
-                  :class="tab.id === activeTabId ? 'is-active' : ''"
+                  :class="{
+                    'is-active': tab.id === activeTabId,
+                    'is-dragging': tab.id === draggingTabId,
+                    'is-drag-over': tab.id === dragOverTabId
+                  }"
+                  draggable="true"
                   text-color="inherit"
                   @click="setActiveTab(tab.id)"
+                  @dragstart="startTabDrag($event, tab.id)"
+                  @dragenter="enterTabDrag(tab.id)"
+                  @dragover.prevent
+                  @drop.prevent="dropTab($event, tab.id)"
+                  @dragend="endTabDrag"
                 >
                   <template #icon>
                     <Loader2 v-if="tab.loading" class="h-3.5 w-3.5 animate-spin text-primary" />
@@ -778,6 +845,7 @@ onUnmounted(() => {
                   }}</span>
                   <span
                     class="tab-close ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded opacity-60 hover:opacity-100"
+                    draggable="false"
                     @click.stop="closeTab(tab.id)"
                   >
                     <X class="h-3.5 w-3.5" />
