@@ -20,7 +20,8 @@ import {
   NRadioGroup,
   NScrollbar,
   NSpace,
-  type GlobalThemeOverrides
+  type GlobalThemeOverrides,
+  type InputInst
 } from 'naive-ui'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 
@@ -69,6 +70,7 @@ const miniModePosition = ref<MiniModePosition>('left')
 const isMaximized = ref(false)
 const isMiniMode = ref(false)
 const isSettingsOpen = ref(false)
+const addressInput = ref<InputInst | null>(null)
 const miniCloseButton = ref<HTMLButtonElement | null>(null)
 const draggingTabId = ref('')
 const dragOverTabId = ref('')
@@ -617,6 +619,13 @@ function handleNewTab(url?: string): void {
   openTab(url ? normalizeUrl(url) : defaultHome.value)
 }
 
+function focusAddress(): void {
+  nextTick(() => {
+    addressInput.value?.focus()
+    addressInput.value?.select()
+  })
+}
+
 function closeActiveTab(): void {
   if (activeTabId.value) closeTab(activeTabId.value)
 }
@@ -653,7 +662,10 @@ onMounted(async () => {
     window.api.onFullscreenActiveVideo(fullscreenActiveVideo),
     window.api.onSeekActiveVideo(seekActiveVideo),
     window.api.onOpenUrlInNewTab((url) => handleNewTab(url)),
-    window.api.onCloseActiveTab(closeActiveTab)
+    window.api.onCloseActiveTab(closeActiveTab),
+    window.api.onNewTab(() => handleNewTab()),
+    window.api.onFocusAddress(focusAddress),
+    window.api.onReloadActiveTab(reload)
   )
 
   window.addEventListener('mousemove', updateMiniControlsInteractivity)
@@ -735,6 +747,7 @@ onUnmounted(() => {
 
         <form class="flex min-w-0 flex-1" @submit.prevent="submitAddress">
           <n-input
+            ref="addressInput"
             v-model:value="addressValue"
             class="address-input"
             size="medium"

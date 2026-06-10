@@ -48,6 +48,21 @@ const api = {
     const listener = (): void => callback()
     ipcRenderer.on('tabs:close-active', listener)
     return () => ipcRenderer.removeListener('tabs:close-active', listener)
+  },
+  onNewTab: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('tabs:new', listener)
+    return () => ipcRenderer.removeListener('tabs:new', listener)
+  },
+  onFocusAddress: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('address:focus', listener)
+    return () => ipcRenderer.removeListener('address:focus', listener)
+  },
+  onReloadActiveTab: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('tabs:reload-active', listener)
+    return () => ipcRenderer.removeListener('tabs:reload-active', listener)
   }
 }
 

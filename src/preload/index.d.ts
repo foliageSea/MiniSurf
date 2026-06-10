@@ -16,6 +16,9 @@ export interface MiniSurfAPI {
   onSeekActiveVideo: (callback: (seconds: number) => void) => () => void
   onOpenUrlInNewTab: (callback: (url: string) => void) => () => void
   onCloseActiveTab: (callback: () => void) => () => void
+  onNewTab: (callback: () => void) => () => void
+  onFocusAddress: (callback: () => void) => () => void
+  onReloadActiveTab: (callback: () => void) => () => void
 }
 
 declare global {

@@ -50,6 +50,39 @@ function isCloseTabShortcut(input: Electron.Input): boolean {
   )
 }
 
+function isNewTabShortcut(input: Electron.Input): boolean {
+  return (
+    input.type === 'keyDown' &&
+    input.control &&
+    !input.alt &&
+    !input.meta &&
+    !input.shift &&
+    input.key.toLowerCase() === 't'
+  )
+}
+
+function isFocusAddressShortcut(input: Electron.Input): boolean {
+  return (
+    input.type === 'keyDown' &&
+    input.control &&
+    !input.alt &&
+    !input.meta &&
+    !input.shift &&
+    input.key.toLowerCase() === 'l'
+  )
+}
+
+function isReloadShortcut(input: Electron.Input): boolean {
+  return (
+    input.type === 'keyDown' &&
+    !input.control &&
+    !input.alt &&
+    !input.meta &&
+    !input.shift &&
+    input.key === 'F5'
+  )
+}
+
 function isCloseWindowShortcut(input: Electron.Input): boolean {
   return (
     input.type === 'keyDown' &&
@@ -173,6 +206,24 @@ function attachWebContentsHandlers(webContents: WebContents): void {
     if (isCloseWindowShortcut(input)) {
       event.preventDefault()
       mainWindow?.close()
+      return
+    }
+
+    if (isNewTabShortcut(input)) {
+      event.preventDefault()
+      sendToRenderer('tabs:new')
+      return
+    }
+
+    if (isFocusAddressShortcut(input)) {
+      event.preventDefault()
+      sendToRenderer('address:focus')
+      return
+    }
+
+    if (isReloadShortcut(input)) {
+      event.preventDefault()
+      sendToRenderer('tabs:reload-active')
       return
     }
 
