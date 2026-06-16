@@ -60,10 +60,12 @@ webview {
   opacity: 0.55;
 }
 
-.tab-button.n-button.is-drag-over {
-  border-color: hsl(var(--primary) / 0.72);
-  background: hsl(var(--primary) / 0.16);
-  box-shadow: inset 3px 0 0 hsl(var(--primary));
+.tab-drag-placeholder {
+  height: 2px;
+  border-radius: 1px;
+  background: hsl(var(--primary));
+  margin: 1px 0;
+  flex-shrink: 0;
 }
 
 .tab-button.n-button.is-active {

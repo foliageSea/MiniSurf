@@ -73,7 +73,7 @@ const isSettingsOpen = ref(false)
 const addressInput = ref<InputInst | null>(null)
 const miniCloseButton = ref<HTMLButtonElement | null>(null)
 const draggingTabId = ref('')
-const dragOverTabId = ref('')
+const dragInsertIndex = ref(-1)
 const webviews = new Map<string, WebviewElement>()
 const cleanupCallbacks: Array<() => void> = []
 let miniControlsInteractive = false
@@ -320,40 +320,41 @@ function setActiveTab(id: string): void {
   saveTabs()
 }
 
-function moveTab(fromId: string, toId: string): void {
-  if (fromId === toId) return
-
-  const fromIndex = tabs.findIndex((tab) => tab.id === fromId)
-  const toIndex = tabs.findIndex((tab) => tab.id === toId)
-  if (fromIndex === -1 || toIndex === -1) return
-
-  const [tab] = tabs.splice(fromIndex, 1)
-  tabs.splice(toIndex, 0, tab)
-  saveTabs()
-}
-
 function startTabDrag(event: DragEvent, id: string): void {
   draggingTabId.value = id
-  dragOverTabId.value = ''
+  dragInsertIndex.value = -1
   event.dataTransfer?.setData('text/plain', id)
   if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
 }
 
-function enterTabDrag(id: string): void {
+function overTabDrag(event: DragEvent, id: string): void {
   if (!draggingTabId.value || draggingTabId.value === id) return
-  dragOverTabId.value = id
+  const el = (event.currentTarget as HTMLElement)
+  const rect = el.getBoundingClientRect()
+  const isBelow = event.clientY > rect.top + rect.height / 2
+  const targetIndex = tabs.findIndex((tab) => tab.id === id)
+  dragInsertIndex.value = isBelow ? targetIndex + 1 : targetIndex
 }
 
-function dropTab(event: DragEvent, id: string): void {
+function dropTab(event: DragEvent): void {
   const fromId = event.dataTransfer?.getData('text/plain') || draggingTabId.value
-  if (fromId) moveTab(fromId, id)
+  const insertIdx = dragInsertIndex.value
+  if (fromId && insertIdx !== -1) {
+    const fromIndex = tabs.findIndex((tab) => tab.id === fromId)
+    if (fromIndex !== -1) {
+      const [tab] = tabs.splice(fromIndex, 1)
+      const adjustedIdx = insertIdx > fromIndex ? insertIdx - 1 : insertIdx
+      tabs.splice(adjustedIdx, 0, tab)
+      saveTabs()
+    }
+  }
   draggingTabId.value = ''
-  dragOverTabId.value = ''
+  dragInsertIndex.value = -1
 }
 
 function endTabDrag(): void {
   draggingTabId.value = ''
-  dragOverTabId.value = ''
+  dragInsertIndex.value = -1
 }
 
 function getActiveWebview(): WebviewElement | undefined {
@@ -830,41 +831,47 @@ onUnmounted(() => {
             </div>
 
             <n-scrollbar class="min-h-0 flex-1">
-              <div class="flex flex-col gap-1 p-2 pr-3">
-                <n-button
-                  v-for="tab in tabs"
-                  :key="tab.id"
-                  class="tab-button"
-                  :class="{
-                    'is-active': tab.id === activeTabId,
-                    'is-dragging': tab.id === draggingTabId,
-                    'is-drag-over': tab.id === dragOverTabId
-                  }"
-                  draggable="true"
-                  text-color="inherit"
-                  @click="setActiveTab(tab.id)"
-                  @dragstart="startTabDrag($event, tab.id)"
-                  @dragenter="enterTabDrag(tab.id)"
-                  @dragover.prevent
-                  @drop.prevent="dropTab($event, tab.id)"
-                  @dragend="endTabDrag"
-                  @mousedown.middle.prevent="closeTab(tab.id)"
-                >
-                  <template #icon>
-                    <Loader2 v-if="tab.loading" class="h-3.5 w-3.5 animate-spin text-primary" />
-                    <Globe2 v-else class="h-3.5 w-3.5" />
-                  </template>
-                  <span class="min-w-0 flex-1 truncate text-left">{{
-                    tab.title || '新标签页'
-                  }}</span>
-                  <span
-                    class="tab-close ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded opacity-60 hover:opacity-100"
-                    draggable="false"
-                    @click.stop="closeTab(tab.id)"
+              <div class="flex flex-col gap-1 p-2 pr-3" @dragover.prevent @drop.prevent="dropTab($event)">
+                <template v-for="(tab, index) in tabs" :key="tab.id">
+                  <div
+                    v-if="dragInsertIndex === index"
+                    class="tab-drag-placeholder"
+                  />
+                  <n-button
+                    class="tab-button"
+                    :class="{
+                      'is-active': tab.id === activeTabId,
+                      'is-dragging': tab.id === draggingTabId
+                    }"
+                    draggable="true"
+                    text-color="inherit"
+                    @click="setActiveTab(tab.id)"
+                    @dragstart="startTabDrag($event, tab.id)"
+                    @dragover.prevent="overTabDrag($event, tab.id)"
+                    @drop.prevent="dropTab($event)"
+                    @dragend="endTabDrag"
+                    @mousedown.middle.prevent="closeTab(tab.id)"
                   >
-                    <X class="h-3.5 w-3.5" />
-                  </span>
-                </n-button>
+                    <template #icon>
+                      <Loader2 v-if="tab.loading" class="h-3.5 w-3.5 animate-spin text-primary" />
+                      <Globe2 v-else class="h-3.5 w-3.5" />
+                    </template>
+                    <span class="min-w-0 flex-1 truncate text-left">{{
+                      tab.title || '新标签页'
+                    }}</span>
+                    <span
+                      class="tab-close ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded opacity-60 hover:opacity-100"
+                      draggable="false"
+                      @click.stop="closeTab(tab.id)"
+                    >
+                      <X class="h-3.5 w-3.5" />
+                    </span>
+                  </n-button>
+                </template>
+                <div
+                  v-if="dragInsertIndex === tabs.length"
+                  class="tab-drag-placeholder"
+                />
               </div>
             </n-scrollbar>
           </div>
