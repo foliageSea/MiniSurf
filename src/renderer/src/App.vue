@@ -848,6 +848,7 @@ onUnmounted(() => {
                   @dragover.prevent
                   @drop.prevent="dropTab($event, tab.id)"
                   @dragend="endTabDrag"
+                  @mousedown.middle.prevent="closeTab(tab.id)"
                 >
                   <template #icon>
                     <Loader2 v-if="tab.loading" class="h-3.5 w-3.5 animate-spin text-primary" />
