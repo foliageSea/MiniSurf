@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  clipboard,
   globalShortcut,
   ipcMain,
   Menu,
@@ -231,6 +232,91 @@ function attachWebContentsHandlers(webContents: WebContents): void {
 
     event.preventDefault()
     sendToRenderer('tabs:close-active')
+  })
+
+  webContents.on('context-menu', (_event, params) => {
+    const menuItems: Electron.MenuItemConstructorOptions[] = []
+
+    if (params.linkURL) {
+      menuItems.push(
+        {
+          label: '在新标签页中打开链接',
+          click: () => sendToRenderer('tabs:open-url', params.linkURL)
+        },
+        {
+          label: '复制链接地址',
+          click: () => clipboard.writeText(params.linkURL)
+        },
+        { type: 'separator' }
+      )
+    }
+
+    if (params.hasImageContents && params.srcURL) {
+      menuItems.push(
+        {
+          label: '在新标签页中打开图片',
+          click: () => sendToRenderer('tabs:open-url', params.srcURL)
+        },
+        {
+          label: '复制图片地址',
+          click: () => clipboard.writeText(params.srcURL)
+        },
+        { type: 'separator' }
+      )
+    }
+
+    if (params.selectionText) {
+      menuItems.push(
+        { label: '复制', role: 'copy' },
+        { type: 'separator' }
+      )
+    }
+
+    if (params.isEditable) {
+      menuItems.push(
+        { label: '撤销', role: 'undo' },
+        { label: '重做', role: 'redo' },
+        { type: 'separator' },
+        { label: '剪切', role: 'cut' },
+        { label: '复制', role: 'copy' },
+        { label: '粘贴', role: 'paste' },
+        { label: '全选', role: 'selectAll' },
+        { type: 'separator' }
+      )
+    }
+
+    menuItems.push(
+      { label: '后退', click: () => webContents.goBack(), enabled: webContents.canGoBack() },
+      { label: '前进', click: () => webContents.goForward(), enabled: webContents.canGoForward() },
+      { label: '刷新', click: () => webContents.reload() },
+      { type: 'separator' },
+      {
+        label: '在浏览器中打开',
+        click: () => {
+          const url = params.pageURL
+          if (url) shell.openExternal(url)
+        }
+      }
+    )
+
+    // 去除首尾和连续的分隔符
+    const cleaned: Electron.MenuItemConstructorOptions[] = []
+    for (const item of menuItems) {
+      if (item.type === 'separator') {
+        if (cleaned.length > 0 && cleaned[cleaned.length - 1].type !== 'separator') {
+          cleaned.push(item)
+        }
+      } else {
+        cleaned.push(item)
+      }
+    }
+    while (cleaned.length > 0 && cleaned[cleaned.length - 1].type === 'separator') {
+      cleaned.pop()
+    }
+
+    if (cleaned.length > 0) {
+      Menu.buildFromTemplate(cleaned).popup()
+    }
   })
 
   webContents.setWindowOpenHandler((details) => {
