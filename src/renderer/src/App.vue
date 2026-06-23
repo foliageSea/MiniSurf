@@ -815,7 +815,7 @@ onUnmounted(() => {
           class="no-drag group absolute inset-y-0 left-0 z-30 flex w-64 -translate-x-[calc(100%-0.75rem)] transition-transform duration-200 ease-out hover:translate-x-0"
         >
           <div
-            class="flex w-full flex-col border-r border-border bg-card/95 shadow-2xl backdrop-blur"
+            class="flex w-full flex-col border-r border-border bg-card/85 shadow-2xl backdrop-blur-2xl"
           >
             <div
               class="flex h-11 shrink-0 items-center justify-between border-b border-border px-3"
