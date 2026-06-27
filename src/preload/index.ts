@@ -12,6 +12,8 @@ const api = {
   showWindow: (): Promise<void> => ipcRenderer.invoke('window:show'),
   toggleMiniMode: (): Promise<void> => ipcRenderer.invoke('window:toggle-mini-mode'),
   getDefaultHome: (): Promise<string> => ipcRenderer.invoke('app:get-default-home'),
+  captureWebviewToClipboard: (webContentsId: number): Promise<boolean> =>
+    ipcRenderer.invoke('webview:capture-to-clipboard', webContentsId),
   onWindowMaximizedChange: (callback: (maximized: boolean) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, maximized: boolean): void =>
       callback(maximized)

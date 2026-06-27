@@ -2,6 +2,7 @@
 import {
   ArrowLeft,
   ArrowRight,
+  Camera,
   Globe2,
   Loader2,
   Plus,
@@ -53,6 +54,7 @@ type WebviewElement = HTMLElement & {
   goForward: () => void
   reload: () => void
   executeJavaScript: <T = unknown>(code: string) => Promise<T>
+  getWebContentsId: () => number
 }
 
 const STORAGE_KEY = 'minisurf.tabs'
@@ -74,9 +76,12 @@ const addressInput = ref<InputInst | null>(null)
 const miniCloseButton = ref<HTMLButtonElement | null>(null)
 const draggingTabId = ref('')
 const dragInsertIndex = ref(-1)
+const isCapturingPage = ref(false)
+const screenshotCopied = ref(false)
 const webviews = new Map<string, WebviewElement>()
 const cleanupCallbacks: Array<() => void> = []
 let miniControlsInteractive = false
+let screenshotCopiedTimer: number | null = null
 
 const activeTab = computed(() => tabs.find((tab) => tab.id === activeTabId.value) ?? tabs[0])
 const loadedTabs = computed(() =>
@@ -329,7 +334,7 @@ function startTabDrag(event: DragEvent, id: string): void {
 
 function overTabDrag(event: DragEvent, id: string): void {
   if (!draggingTabId.value || draggingTabId.value === id) return
-  const el = (event.currentTarget as HTMLElement)
+  const el = event.currentTarget as HTMLElement
   const rect = el.getBoundingClientRect()
   const isBelow = event.clientY > rect.top + rect.height / 2
   const targetIndex = tabs.findIndex((tab) => tab.id === id)
@@ -510,6 +515,24 @@ function reload(): void {
   getActiveWebview()?.reload()
 }
 
+async function captureActivePageToClipboard(): Promise<void> {
+  const webview = getActiveWebview()
+  if (!webview || isCapturingPage.value) return
+
+  isCapturingPage.value = true
+  try {
+    const copied = await window.api.captureWebviewToClipboard(webview.getWebContentsId())
+    screenshotCopied.value = copied
+    if (screenshotCopiedTimer) window.clearTimeout(screenshotCopiedTimer)
+    screenshotCopiedTimer = window.setTimeout(() => {
+      screenshotCopied.value = false
+      screenshotCopiedTimer = null
+    }, 1400)
+  } finally {
+    isCapturingPage.value = false
+  }
+}
+
 function minimizeWindow(): void {
   window.api.minimizeWindow()
 }
@@ -674,6 +697,7 @@ onMounted(async () => {
   cleanupCallbacks.push(() => {
     window.removeEventListener('mousemove', updateMiniControlsInteractivity)
     window.removeEventListener('mouseleave', disableMiniControlsInteractivity)
+    if (screenshotCopiedTimer) window.clearTimeout(screenshotCopiedTimer)
     disableMiniControlsInteractivity()
   })
 })
@@ -743,6 +767,17 @@ onUnmounted(() => {
               class="h-4 w-4"
               :class="activeTab?.loading ? 'animate-spin text-primary' : ''"
             />
+          </template>
+        </n-button>
+        <n-button
+          quaternary
+          circle
+          :disabled="!activeTab || isCapturingPage"
+          :title="screenshotCopied ? '已复制到剪贴板' : '截图到剪贴板'"
+          @click="captureActivePageToClipboard"
+        >
+          <template #icon>
+            <Camera class="h-4 w-4" :class="screenshotCopied ? 'text-primary' : ''" />
           </template>
         </n-button>
 
@@ -831,12 +866,13 @@ onUnmounted(() => {
             </div>
 
             <n-scrollbar class="min-h-0 flex-1">
-              <div class="flex flex-col gap-1 p-2 pr-3" @dragover.prevent @drop.prevent="dropTab($event)">
+              <div
+                class="flex flex-col gap-1 p-2 pr-3"
+                @dragover.prevent
+                @drop.prevent="dropTab($event)"
+              >
                 <template v-for="(tab, index) in tabs" :key="tab.id">
-                  <div
-                    v-if="dragInsertIndex === index"
-                    class="tab-drag-placeholder"
-                  />
+                  <div v-if="dragInsertIndex === index" class="tab-drag-placeholder" />
                   <n-button
                     class="tab-button"
                     :class="{
@@ -868,10 +904,7 @@ onUnmounted(() => {
                     </span>
                   </n-button>
                 </template>
-                <div
-                  v-if="dragInsertIndex === tabs.length"
-                  class="tab-drag-placeholder"
-                />
+                <div v-if="dragInsertIndex === tabs.length" class="tab-drag-placeholder" />
               </div>
             </n-scrollbar>
           </div>

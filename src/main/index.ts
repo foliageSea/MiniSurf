@@ -9,7 +9,8 @@ import {
   screen,
   shell,
   Tray,
-  WebContents
+  WebContents,
+  webContents
 } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -266,10 +267,7 @@ function attachWebContentsHandlers(webContents: WebContents): void {
     }
 
     if (params.selectionText) {
-      menuItems.push(
-        { label: '复制', role: 'copy' },
-        { type: 'separator' }
-      )
+      menuItems.push({ label: '复制', role: 'copy' }, { type: 'separator' })
     }
 
     if (params.isEditable) {
@@ -402,6 +400,18 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('window:toggle-mini-mode', () => toggleMiniMode())
   ipcMain.handle('app:get-default-home', () => DEFAULT_HOME)
+  ipcMain.handle('webview:capture-to-clipboard', async (_event, webContentsId: unknown) => {
+    if (typeof webContentsId !== 'number') return false
+
+    const target = webContents.fromId(webContentsId)
+    if (!target || target.isDestroyed()) return false
+
+    const image = await target.capturePage()
+    if (image.isEmpty()) return false
+
+    clipboard.writeImage(image)
+    return true
+  })
 
   createTray()
   createWindow()

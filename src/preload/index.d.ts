@@ -9,6 +9,7 @@ export interface MiniSurfAPI {
   showWindow: () => Promise<void>
   toggleMiniMode: () => Promise<void>
   getDefaultHome: () => Promise<string>
+  captureWebviewToClipboard: (webContentsId: number) => Promise<boolean>
   onWindowMaximizedChange: (callback: (maximized: boolean) => void) => () => void
   onMiniModeChange: (callback: (enabled: boolean) => void) => () => void
   onToggleActiveVideo: (callback: () => void) => () => void
