@@ -3,11 +3,14 @@ import {
   ArrowLeft,
   ArrowRight,
   Camera,
+  Copy,
   Globe2,
   Loader2,
+  Minus,
   Plus,
   RefreshCw,
   Settings,
+  Square,
   X
 } from 'lucide-vue-next'
 import {
@@ -43,6 +46,7 @@ type PersistedState = {
 }
 
 type MiniModePosition = 'left' | 'right'
+type WindowControlStyle = 'mac' | 'win'
 
 type WebviewElement = HTMLElement & {
   src: string
@@ -60,6 +64,7 @@ type WebviewElement = HTMLElement & {
 const STORAGE_KEY = 'minisurf.tabs'
 const THEME_COLOR_KEY = 'minisurf.themeColor'
 const MINI_POSITION_KEY = 'minisurf.miniPosition'
+const WINDOW_CONTROL_STYLE_KEY = 'minisurf.windowControlStyle'
 const DEFAULT_THEME_COLOR = '#38bdf8'
 
 const tabs = reactive<BrowserTab[]>([])
@@ -69,6 +74,7 @@ const addressValue = ref('')
 const defaultHome = ref('https://www.bilibili.com')
 const themeColor = ref(DEFAULT_THEME_COLOR)
 const miniModePosition = ref<MiniModePosition>('left')
+const windowControlStyle = ref<WindowControlStyle>('mac')
 const isMaximized = ref(false)
 const isMiniMode = ref(false)
 const isSettingsOpen = ref(false)
@@ -201,6 +207,16 @@ function applyMiniModePosition(value: string | number): void {
 
 function loadMiniModePosition(): void {
   applyMiniModePosition(localStorage.getItem(MINI_POSITION_KEY) || 'left')
+}
+
+function applyWindowControlStyle(value: string | number): void {
+  const style: WindowControlStyle = value === 'win' ? 'win' : 'mac'
+  windowControlStyle.value = style
+  localStorage.setItem(WINDOW_CONTROL_STYLE_KEY, style)
+}
+
+function loadWindowControlStyle(): void {
+  applyWindowControlStyle(localStorage.getItem(WINDOW_CONTROL_STYLE_KEY) || 'mac')
 }
 
 function normalizeUrl(value: string): string {
@@ -669,6 +685,7 @@ watch(activeTabId, () => {
 onMounted(async () => {
   loadThemeColor()
   loadMiniModePosition()
+  loadWindowControlStyle()
   defaultHome.value = await window.api.getDefaultHome()
   if (!loadPersistedTabs()) openTab(defaultHome.value)
   await nextTick()
@@ -722,22 +739,48 @@ onUnmounted(() => {
           <span>MiniSurf</span>
         </div>
 
-        <div class="no-drag absolute left-0 flex shrink-0 items-center gap-2 px-3">
-          <button
-            class="window-traffic-button window-traffic-close"
-            title="最小化到托盘"
-            @click="closeWindow"
-          />
-          <button
-            class="window-traffic-button window-traffic-minimize"
-            title="最小化"
-            @click="minimizeWindow"
-          />
-          <button
-            class="window-traffic-button window-traffic-maximize"
-            :title="isMaximized ? '还原' : '最大化'"
-            @click="toggleMaximizeWindow"
-          />
+        <div
+          class="no-drag absolute flex shrink-0 items-center"
+          :class="windowControlStyle === 'mac' ? 'left-0 gap-2 px-3' : 'right-0'"
+        >
+          <template v-if="windowControlStyle === 'mac'">
+            <button
+              class="window-traffic-button window-traffic-close"
+              title="最小化到托盘"
+              @click="closeWindow"
+            />
+            <button
+              class="window-traffic-button window-traffic-minimize"
+              title="最小化"
+              @click="minimizeWindow"
+            />
+            <button
+              class="window-traffic-button window-traffic-maximize"
+              :title="isMaximized ? '还原' : '最大化'"
+              @click="toggleMaximizeWindow"
+            />
+          </template>
+
+          <template v-else>
+            <button class="window-win-button" title="最小化" @click="minimizeWindow">
+              <Minus class="h-4 w-4" />
+            </button>
+            <button
+              class="window-win-button"
+              :title="isMaximized ? '还原' : '最大化'"
+              @click="toggleMaximizeWindow"
+            >
+              <Copy v-if="isMaximized" class="h-3.5 w-3.5" />
+              <Square v-else class="h-3.5 w-3.5" />
+            </button>
+            <button
+              class="window-win-button window-win-close"
+              title="最小化到托盘"
+              @click="closeWindow"
+            >
+              <X class="h-4 w-4" />
+            </button>
+          </template>
         </div>
       </header>
 
@@ -829,6 +872,19 @@ onUnmounted(() => {
             >
               <n-radio-button value="left">左下角</n-radio-button>
               <n-radio-button value="right">右下角</n-radio-button>
+            </n-radio-group>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-title">标题栏按钮</div>
+            <n-radio-group
+              v-model:value="windowControlStyle"
+              class="window-control-style-group"
+              button-style="solid"
+              @update:value="applyWindowControlStyle"
+            >
+              <n-radio-button value="mac">Mac</n-radio-button>
+              <n-radio-button value="win">Win</n-radio-button>
             </n-radio-group>
           </div>
         </n-space>
