@@ -32,7 +32,7 @@ webview {
   min-height: 40px;
   width: 100%;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 0;
   background: hsl(var(--secondary) / 0.35);
   color: hsl(var(--muted-foreground));
   transition:
@@ -61,14 +61,15 @@ webview {
 }
 
 .tab-button.n-button.is-active {
-  border-color: hsl(var(--primary) / 0.58);
+  border-color: transparent;
+  border-bottom-color: hsl(var(--primary));
   background: linear-gradient(90deg, hsl(var(--primary) / 0.24), hsl(var(--primary) / 0.1));
   color: hsl(var(--foreground));
-  box-shadow: inset 3px 0 0 hsl(var(--primary));
 }
 
 .tab-button.n-button.is-active:hover {
-  border-color: hsl(var(--primary) / 0.68);
+  border-color: hsl(var(--border));
+  border-bottom-color: hsl(var(--primary));
   background: linear-gradient(90deg, hsl(var(--primary) / 0.3), hsl(var(--primary) / 0.14));
 }
 
