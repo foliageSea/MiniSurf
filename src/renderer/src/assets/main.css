@@ -86,6 +86,7 @@ webview {
   justify-content: flex-start;
 }
 
+.tab-release:hover,
 .tab-close:hover {
   background: hsl(var(--muted));
 }

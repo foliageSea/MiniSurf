@@ -8,6 +8,7 @@ import {
   Loader2,
   Minus,
   Plus,
+  PowerOff,
   RefreshCw,
   Settings,
   Square,
@@ -95,6 +96,7 @@ const loadedTabs = computed(() =>
     .map((id) => tabs.find((tab) => tab.id === id))
     .filter((tab): tab is BrowserTab => Boolean(tab))
 )
+const hasLoadedBackgroundTabs = computed(() => loadedTabIds.some((id) => id !== activeTabId.value))
 const naiveThemeOverrides = computed<GlobalThemeOverrides>(() => ({
   common: {
     primaryColor: themeColor.value,
@@ -245,6 +247,32 @@ function ensureTabLoaded(tab: BrowserTab): void {
 function forgetLoadedTab(id: string): void {
   const index = loadedTabIds.indexOf(id)
   if (index !== -1) loadedTabIds.splice(index, 1)
+}
+
+function destroyTabInstance(id: string): void {
+  const tab = tabs.find((item) => item.id === id)
+  if (!tab || id === activeTabId.value || !tab.loaded) return
+
+  const webview = webviews.get(id)
+  if (webview) {
+    const url = webview.getURL()
+    const title = webview.getTitle()
+    if (url) tab.url = url
+    if (title) tab.title = title
+  }
+
+  tab.initialUrl = tab.url
+  tab.loading = false
+  tab.loaded = false
+  tab.canGoBack = false
+  tab.canGoForward = false
+  webviews.delete(id)
+  forgetLoadedTab(id)
+  saveTabs()
+}
+
+function destroyBackgroundTabInstances(): void {
+  loadedTabIds.filter((id) => id !== activeTabId.value).forEach((id) => destroyTabInstance(id))
 }
 
 function loadPersistedTabs(): boolean {
@@ -914,11 +942,24 @@ onUnmounted(() => {
               <span class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 标签页
               </span>
-              <n-button quaternary circle title="新建标签" @click="handleNewTab()">
-                <template #icon>
-                  <Plus class="h-4 w-4" />
-                </template>
-              </n-button>
+              <div class="flex items-center gap-1">
+                <n-button
+                  quaternary
+                  circle
+                  title="释放其他页面实例"
+                  :disabled="!hasLoadedBackgroundTabs"
+                  @click="destroyBackgroundTabInstances"
+                >
+                  <template #icon>
+                    <PowerOff class="h-4 w-4" />
+                  </template>
+                </n-button>
+                <n-button quaternary circle title="新建标签" @click="handleNewTab()">
+                  <template #icon>
+                    <Plus class="h-4 w-4" />
+                  </template>
+                </n-button>
+              </div>
             </div>
 
             <n-scrollbar class="min-h-0 flex-1">
@@ -951,12 +992,22 @@ onUnmounted(() => {
                     <span class="min-w-0 flex-1 truncate text-left">{{
                       tab.title || '新标签页'
                     }}</span>
-                    <span
-                      class="tab-close ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded opacity-60 hover:opacity-100"
-                      draggable="false"
-                      @click.stop="closeTab(tab.id)"
-                    >
-                      <X class="h-3.5 w-3.5" />
+                    <span class="ml-2 flex shrink-0 items-center gap-1" draggable="false">
+                      <span
+                        v-if="tab.loaded && tab.id !== activeTabId"
+                        class="tab-release flex h-5 w-5 items-center justify-center rounded opacity-60 hover:opacity-100"
+                        title="释放页面实例"
+                        @click.stop="destroyTabInstance(tab.id)"
+                      >
+                        <PowerOff class="h-3.5 w-3.5" />
+                      </span>
+                      <span
+                        class="tab-close flex h-5 w-5 items-center justify-center rounded opacity-60 hover:opacity-100"
+                        title="关闭标签页"
+                        @click.stop="closeTab(tab.id)"
+                      >
+                        <X class="h-3.5 w-3.5" />
+                      </span>
                     </span>
                   </n-button>
                 </template>
